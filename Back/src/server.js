@@ -27,7 +27,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: "Erreur serveur" });
 });
 
-// Démarre le serveur sur le port configuré. 
+// Démarre le serveur sur le port configuré.
 const PORT = process.env.PORT ?? 3000;
 app.listen(PORT, () => {
   console.log(`API started on port ${PORT}`);
