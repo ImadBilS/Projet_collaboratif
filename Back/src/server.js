@@ -3,6 +3,7 @@ require("dotenv").config();
 
 const express = require("express");
 const authRoutes = require("./routes/auth.routes");
+const ressource = require("./routes/ressources.route");
 const app = express();
 
 // Parse automatiquement les requêtes JSON.
@@ -15,7 +16,7 @@ app.get("/health", (req, res) => {
 
 // Monte les routes d'authentification sous /api/auth.
 app.use("/api/auth", authRoutes);
-
+app.use("/api/ressources", ressource);
 // Si aucune route ne correspond, on renvoie un 404.
 app.use((req, res) => {
   res.status(404).json({ message: "Route introuvable" });

@@ -17,10 +17,10 @@ function authenticateJWT(req, res, next) {
   try {
     // Décode et valide le token.
     const decoded = verifyToken(token);
-
+    
     // Stocke les infos utiles pour les routes suivantes.
     req.user = {
-      userId: decoded.userId,
+      user_id: decoded.userId,
       role: decoded.role,
     };
 
