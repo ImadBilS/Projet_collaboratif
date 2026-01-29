@@ -44,6 +44,8 @@ model User {
   password           String
   role               String
   sex                String
+  avatar             String?
+  bio                String?
   street_number      Int
   street_type        String
   postal_code        Int
