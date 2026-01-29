@@ -3,11 +3,13 @@ require("dotenv").config();
 
 const express = require("express");
 const authRoutes = require("./routes/auth.routes");
+const cors = require("cors"); // <--- AJOUT 1 : Import du module
 const usersRoutes = require("./routes/users.routes");
 const app = express();
 
 // Parse automatiquement les requêtes JSON.
-app.use(express.json());
+app.use(cors()); // 1. D'abord CORS
+app.use(express.json()); // 2. Ensuite le décodeur JSON (Indispensable !)
 
 // Route pour vérifier que l'API fonctionne.
 app.get("/health", (req, res) => {
