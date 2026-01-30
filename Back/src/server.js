@@ -3,6 +3,8 @@ require("dotenv").config();
 
 const express = require("express");
 const authRoutes = require("./routes/auth.routes");
+const ressource = require("./routes/ressources.route");
+
 const cors = require("cors"); // <--- AJOUT 1 : Import du module
 const usersRoutes = require("./routes/users.routes");
 const app = express();
@@ -18,6 +20,7 @@ app.get("/health", (req, res) => {
 
 // Monte les routes d'authentification sous /api/auth.
 app.use("/api/auth", authRoutes);
+app.use("/api/ressources", ressource);
 // Monte les routes CRUD utilisateur sous /api/users.
 app.use("/api/users", usersRoutes);
 
