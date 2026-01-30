@@ -1,14 +1,25 @@
 const express = require("express");
-const { create, getRessources, getRessourcesUser, deleteRessource } = require("../controllers/ressources.controller");
 const {
-  authenticateJWT,
-} = require("../middlewares/auth.middleware");
+  create,
+  getRessourceById,
+  getRessources,
+  getRessourcesUser,
+  getNearbyRessourcesForMe,
+  getPublicRessources,
+  deleteRessource,
+  updateRessource,
+} = require("../controllers/ressources.controller");
+const { authenticateJWT } = require("../middlewares/auth.middleware");
 
 const router = express.Router();
 
 // Route protégée: nécessite un JWT valide
-router.post("/", authenticateJWT, create);  
+router.post("/", authenticateJWT, create);
 router.get("/", authenticateJWT, getRessources);
+router.get("/public", getPublicRessources);
 router.get("/me", authenticateJWT, getRessourcesUser);
+router.get("/:id", authenticateJWT, getRessourceById);
+router.get("/nearby/me", authenticateJWT, getNearbyRessourcesForMe);
 router.delete("/:id", authenticateJWT, deleteRessource);
+router.put("/:id", authenticateJWT, updateRessource);
 module.exports = router;
