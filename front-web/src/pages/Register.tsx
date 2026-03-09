@@ -5,7 +5,6 @@ import {
   Mail,
   Lock,
   Calendar,
-  Shield,
   MapPin,
   Hash,
   Globe,
@@ -44,7 +43,7 @@ const initialForm: RegisterForm = {
   mail: "",
   password: "",
   confirmPassword: "",
-  role: "",
+  role: "Citoyen",
   sex: "",
   street_number: "",
   street_type: "",
@@ -288,6 +287,7 @@ const handleChange = (
               </Field>
 
               {/* Rôle */}
+              {/* 
               <Field label="Rôle">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
@@ -309,7 +309,7 @@ const handleChange = (
                   </select>
                 </div>
               </Field>
-
+                */}
               {/* Mot de passe */}
               <Field label="Mot de passe" icon={<Lock className="w-4 h-4" />}>
                 <input
