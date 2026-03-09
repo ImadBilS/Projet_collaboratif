@@ -8,6 +8,7 @@ const {
   getPublicRessources,
   deleteRessource,
   updateRessource,
+  getRessourcesByCategory,
 } = require("../controllers/ressources.controller");
 const { authenticateJWT } = require("../middlewares/auth.middleware");
 
@@ -22,4 +23,6 @@ router.get("/:id", authenticateJWT, getRessourceById);
 router.get("/nearby/me", authenticateJWT, getNearbyRessourcesForMe);
 router.delete("/:id", authenticateJWT, deleteRessource);
 router.put("/:id", authenticateJWT, updateRessource);
+router.get("/category/:category", getRessourcesByCategory);
+
 module.exports = router;
