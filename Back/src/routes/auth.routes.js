@@ -4,6 +4,8 @@ const {
   register,
   login,
   me,
+  refresh,
+  logout,
 } = require("../controllers/auth.controller");
 const {
   authenticateJWT,
@@ -15,6 +17,8 @@ const router = express.Router();
 // Routes publiques (pas besoin de token)
 router.post("/register", register);
 router.post("/login", login);
+router.post("/refresh", refresh);
+router.post("/logout", logout);
 // Route protégée: nécessite un JWT valide
 router.get("/me", authenticateJWT, me);
 

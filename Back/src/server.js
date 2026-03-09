@@ -2,10 +2,18 @@
 require("dotenv").config();
 
 const express = require("express");
+const cors = require("cors");
 const authRoutes = require("./routes/auth.routes");
 const app = express();
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
 
 // Parse automatiquement les requêtes JSON.
+app.use(
+  cors({
+    origin: CORS_ORIGIN,
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Route pour vérifier que l'API fonctionne.
