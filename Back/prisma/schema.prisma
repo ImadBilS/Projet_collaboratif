@@ -52,6 +52,8 @@ model User {
   address_complement String
   city               String
   country            String
+  is_anonymized      Boolean   @default(false)
+  deleted_at         DateTime?
 
   resources          Resources[]
   comments           Comments[]
