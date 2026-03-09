@@ -4,6 +4,12 @@ require("dotenv").config();
 const express = require("express");
 const authRoutes = require("./routes/auth.routes");
 const ressource = require("./routes/ressources.route");
+const statsRoutes = require("./routes/stats.route.js");
+const comments = require("./routes/comments.route.js");
+const replies = require("./routes/replies.route.js");
+const reacts = require("./routes/react.route.js");
+const reports = require("./routes/report.route.js");
+const notifications = require("./routes/notifications.route.js");
 
 const cors = require("cors"); // <--- AJOUT 1 : Import du module
 const usersRoutes = require("./routes/users.routes");
@@ -20,9 +26,17 @@ app.get("/health", (req, res) => {
 
 // Monte les routes d'authentification sous /api/auth.
 app.use("/api/auth", authRoutes);
-app.use("/api/ressources", ressource);
 // Monte les routes CRUD utilisateur sous /api/users.
 app.use("/api/users", usersRoutes);
+
+// Routes d'accèes
+app.use("/ressources", ressource);
+app.use("/stats", statsRoutes);
+app.use("/comments", comments);
+app.use("/replies", replies);
+app.use("/reacts", reacts);
+app.use("/reports", reports);
+app.use("/notifications", notifications);
 
 // Si aucune route ne correspond, on renvoie un 404.
 app.use((req, res) => {
