@@ -55,7 +55,6 @@ async function register(req, res) {
     street_number === undefined ||
     !street_type ||
     postal_code === undefined ||
-    !address_complement ||
     !city ||
     !country
   ) {
@@ -79,11 +78,9 @@ async function register(req, res) {
   const postalCode = toInteger(postal_code);
 
   if (streetNumber === null || postalCode === null) {
-    return res
-      .status(400)
-      .json({
-        message: "numéro de rue et code postal doivent être des nombres",
-      });
+    return res.status(400).json({
+      message: "numéro de rue et code postal doivent être des nombres",
+    });
   }
 
   try {
@@ -112,7 +109,7 @@ async function register(req, res) {
         street_number: streetNumber,
         street_type,
         postal_code: postalCode,
-        address_complement,
+        address_complement: address_complement || null,
         city,
         country,
       },
