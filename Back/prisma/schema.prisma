@@ -12,7 +12,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 enum VisibilityEnum {
   PUBLIC
   PRIVATE
@@ -36,11 +35,11 @@ enum CommentStatusEnum {
 // =====================
 
 model User {
-  user_id            Int       @id @default(autoincrement())
+  user_id            Int      @id @default(autoincrement())
   firstname          String
   lastname           String
   birth              DateTime
-  mail               String    @unique
+  mail               String   @unique
   password           String
   role               String
   sex                String
@@ -49,37 +48,37 @@ model User {
   street_number      Int
   street_type        String
   postal_code        Int
-  address_complement String
+  address_complement String?
   city               String
   country            String
   is_anonymized      Boolean   @default(false)
   deleted_at         DateTime?
 
-  resources          Resources[]
-  comments           Comments[]
-  replies            RepliesComment[]
-  groups             CanHave[]
-  reactions          React[]
-  views              Views[]
+  resources Resources[]
+  comments  Comments[]
+  replies   RepliesComment[]
+  groups    CanHave[]
+  reactions React[]
+  views     Views[]
 }
 
 model GroupRelation {
-  relation_id Int     @id @default(autoincrement())
+  relation_id Int    @id @default(autoincrement())
   wording     String
 
-  groups      Group[]
+  groups Group[]
 }
 
 model Resources {
-  ressource_id Int             @id @default(autoincrement())
+  ressource_id Int            @id @default(autoincrement())
   wording      String
   visibility   VisibilityEnum
   user_id      Int
 
-  user         User            @relation(fields: [user_id], references: [user_id])
-  comments     Comments[]
-  reactions    React[]
-  views        Views[]
+  user      User       @relation(fields: [user_id], references: [user_id])
+  comments  Comments[]
+  reactions React[]
+  views     Views[]
 }
 
 model Comments {
@@ -89,28 +88,28 @@ model Comments {
   user_id      Int
   ressource_id Int
 
-  user         User              @relation(fields: [user_id], references: [user_id])
-  resource     Resources         @relation(fields: [ressource_id], references: [ressource_id])
-  replies      RepliesComment[]
+  user     User             @relation(fields: [user_id], references: [user_id])
+  resource Resources        @relation(fields: [ressource_id], references: [ressource_id])
+  replies  RepliesComment[]
 }
 
 model RepliesComment {
-  replie_id  Int      @id @default(autoincrement())
+  replie_id  Int    @id @default(autoincrement())
   text       String
   user_id    Int
   comment_id Int
 
-  user       User     @relation(fields: [user_id], references: [user_id])
-  comment    Comments @relation(fields: [comment_id], references: [comment_id])
+  user    User     @relation(fields: [user_id], references: [user_id])
+  comment Comments @relation(fields: [comment_id], references: [comment_id])
 }
 
 model Group {
-  group_id    Int            @id @default(autoincrement())
+  group_id    Int    @id @default(autoincrement())
   name        String
   relation_id Int
 
-  relation    GroupRelation  @relation(fields: [relation_id], references: [relation_id])
-  users       CanHave[]
+  relation GroupRelation @relation(fields: [relation_id], references: [relation_id])
+  users    CanHave[]
 }
 
 // =====================
@@ -121,8 +120,8 @@ model CanHave {
   user_id  Int
   group_id Int
 
-  user     User  @relation(fields: [user_id], references: [user_id])
-  group    Group @relation(fields: [group_id], references: [group_id])
+  user  User  @relation(fields: [user_id], references: [user_id])
+  group Group @relation(fields: [group_id], references: [group_id])
 
   @@id([user_id, group_id])
 }
@@ -132,8 +131,8 @@ model React {
   ressource_id  Int
   reaction_type ReactionTypeEnum?
 
-  user          User       @relation(fields: [user_id], references: [user_id])
-  resource      Resources  @relation(fields: [ressource_id], references: [ressource_id])
+  user     User      @relation(fields: [user_id], references: [user_id])
+  resource Resources @relation(fields: [ressource_id], references: [ressource_id])
 
   @@id([user_id, ressource_id])
 }
@@ -143,8 +142,8 @@ model Views {
   ressource_id Int
   view_number  Int
 
-  user         User       @relation(fields: [user_id], references: [user_id])
-  resource     Resources  @relation(fields: [ressource_id], references: [ressource_id])
+  user     User      @relation(fields: [user_id], references: [user_id])
+  resource Resources @relation(fields: [ressource_id], references: [ressource_id])
 
   @@id([user_id, ressource_id])
 }

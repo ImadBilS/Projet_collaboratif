@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import Layout from "./components/Layout";
 import { authService } from "./services/authService";
 import type React from "react";
+import Register from "./pages/Register";
 
 // Petit composant pour protéger les routes (si pas connecté -> Login)
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -15,6 +16,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
 
         {/* Toutes les pages Admin sont dans le Layout */}
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
