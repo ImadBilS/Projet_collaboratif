@@ -51,15 +51,17 @@ model User {
   address_complement String?
   city               String
   country            String
+  refresh_token_hash String?
+  refresh_token_expires_at DateTime?
+
+  resources          Resources[]
+  comments           Comments[]
+  replies            RepliesComment[]
+  groups             CanHave[]
+  reactions          React[]
+  views              Views[]
   is_anonymized      Boolean   @default(false)
   deleted_at         DateTime?
-
-  resources Resources[]
-  comments  Comments[]
-  replies   RepliesComment[]
-  groups    CanHave[]
-  reactions React[]
-  views     Views[]
 }
 
 model GroupRelation {
