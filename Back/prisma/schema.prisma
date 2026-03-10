@@ -71,11 +71,36 @@ model GroupRelation {
   groups Group[]
 }
 
+enum ResourceCategory {
+  FOOD
+  CLOTHES
+  TOOLS
+  TRANSPORT
+  HOUSING
+  SERVICES
+  EDUCATION
+  HEALTH
+  SOCIAL_SUPPORT // aide morale, écoute, accompagnement
+  EVENTS //rencontres, ateliers, activités sociales
+  COMMUNITY // activités de quartier, entraide locale
+  VOLUNTEERING //bénévolat, actions solidaires
+  DONATION // dons d’objets, nourriture, vêtements
+  JOB_HELP // aide CV, recherche d’emploi
+  CHILDCARE //garde d’enfants, soutien parental
+  ELDERLY_HELP // aide aux personnes âgées
+  PETS // animaux de compagnie
+  SPORT
+  CULTURE
+  OTHER
+}
+
 model Resources {
-  ressource_id Int            @id @default(autoincrement())
+  ressource_id Int              @id @default(autoincrement())
   wording      String
   visibility   VisibilityEnum
   user_id      Int
+  category     ResourceCategory @default(OTHER)
+  created_at   DateTime         @default(now()) // ← AJOUT
 
   user      User       @relation(fields: [user_id], references: [user_id])
   comments  Comments[]
@@ -89,20 +114,24 @@ model Comments {
   status       CommentStatusEnum
   user_id      Int
   ressource_id Int
+  created_at   DateTime          @default(now()) // ← AJOUT
 
   user     User             @relation(fields: [user_id], references: [user_id])
   resource Resources        @relation(fields: [ressource_id], references: [ressource_id])
   replies  RepliesComment[]
+  reports  Report[]
 }
 
 model RepliesComment {
   replie_id  Int    @id @default(autoincrement())
   text       String
+  created_at DateTime @default(now()) // ← AJOUT
   user_id    Int
   comment_id Int
 
   user    User     @relation(fields: [user_id], references: [user_id])
   comment Comments @relation(fields: [comment_id], references: [comment_id])
+  reports Report[]
 }
 
 model Group {
@@ -112,6 +141,28 @@ model Group {
 
   relation GroupRelation @relation(fields: [relation_id], references: [relation_id])
   users    CanHave[]
+}
+
+model Report {
+  report_id  Int      @id @default(autoincrement())
+  reason     String
+  user_id    Int
+  comment_id Int?
+  replie_id  Int?
+  created_at DateTime @default(now())
+  resolved   Boolean  @default(false)
+
+  user    User            @relation(fields: [user_id], references: [user_id])
+  comment Comments?       @relation(fields: [comment_id], references: [comment_id])
+  reply   RepliesComment? @relation(fields: [replie_id], references: [replie_id])
+}
+
+model Notification {
+  notification_id Int      @id @default(autoincrement())
+  type            String
+  message         String
+  created_at      DateTime @default(now())
+  is_read         Boolean  @default(false)
 }
 
 // =====================
@@ -131,6 +182,7 @@ model CanHave {
 model React {
   user_id       Int
   ressource_id  Int
+  created_at    DateTime          @default(now())
   reaction_type ReactionTypeEnum?
 
   user     User      @relation(fields: [user_id], references: [user_id])
@@ -142,6 +194,7 @@ model React {
 model Views {
   user_id      Int
   ressource_id Int
+  created_at   DateTime @default(now())
   view_number  Int
 
   user     User      @relation(fields: [user_id], references: [user_id])
