@@ -1,7 +1,13 @@
 // Contrôleurs d'authentification: inscription, connexion, profil.
+const crypto = require("crypto");
 const { prisma } = require("../db/prisma");
 const { hashPassword, comparePassword } = require("../utils/password");
-const { signToken } = require("../utils/jwt");
+const {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+  REFRESH_TOKEN_EXPIRES_IN,
+} = require("../utils/jwt");
 
 // Rôles autorisés pour l'inscription.
 const ALLOWED_ROLES = ["Citoyen", "Modérateur", "Administrateur"];
@@ -24,6 +30,94 @@ function sanitizeUser(user) {
   return safeUser;
 }
 
+const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME ?? "refreshToken";
+
+function parseDurationToMs(value) {
+  if (typeof value === "number") {
+    return value * 1000;
+  }
+
+  if (typeof value !== "string") {
+    return 7 * 24 * 60 * 60 * 1000;
+  }
+
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d+)\s*([smhd])?$/i);
+
+  if (!match) {
+    return 7 * 24 * 60 * 60 * 1000;
+  }
+
+  const amount = Number.parseInt(match[1], 10);
+  const unit = (match[2] ?? "s").toLowerCase();
+  const multipliers = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  };
+
+  return amount * multipliers[unit];
+}
+
+function getRefreshCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/api/auth",
+    maxAge: parseDurationToMs(REFRESH_TOKEN_EXPIRES_IN),
+  };
+}
+
+function getCookieValue(req, name) {
+  const header = req.headers.cookie;
+
+  if (!header) {
+    return null;
+  }
+
+  const cookies = header.split(";").map((part) => part.trim());
+  const prefix = `${name}=`;
+  const rawCookie = cookies.find((entry) => entry.startsWith(prefix));
+
+  if (!rawCookie) {
+    return null;
+  }
+
+  return decodeURIComponent(rawCookie.slice(prefix.length));
+}
+
+function hashRefreshToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+async function createSessionForUser(user) {
+  const accessToken = signAccessToken({
+    userId: user.user_id,
+    role: user.role,
+  });
+
+  const refreshToken = signRefreshToken({
+    userId: user.user_id,
+    role: user.role,
+  });
+
+  const refreshExpiresAt = new Date(
+    Date.now() + parseDurationToMs(REFRESH_TOKEN_EXPIRES_IN)
+  );
+
+  await prisma.user.update({
+    where: { user_id: user.user_id },
+    data: {
+      refresh_token_hash: hashRefreshToken(refreshToken),
+      refresh_token_expires_at: refreshExpiresAt,
+    },
+  });
+
+  return { accessToken, refreshToken };
+}
+
 // Inscription d'un utilisateur.
 async function register(req, res) {
   // Récupération des champs envoyés par le client.
@@ -33,7 +127,7 @@ async function register(req, res) {
     birth,
     mail,
     password,
-    role,
+    role = "Citoyen", // Par défaut, le rôle est "Citoyen" si non spécifié.
     sex,
     street_number,
     street_type,
@@ -50,12 +144,10 @@ async function register(req, res) {
     !birth ||
     !mail ||
     !password ||
-    !role ||
     !sex ||
     street_number === undefined ||
     !street_type ||
     postal_code === undefined ||
-    !address_complement ||
     !city ||
     !country
   ) {
@@ -79,11 +171,9 @@ async function register(req, res) {
   const postalCode = toInteger(postal_code);
 
   if (streetNumber === null || postalCode === null) {
-    return res
-      .status(400)
-      .json({
-        message: "numéro de rue et code postal doivent être des nombres",
-      });
+    return res.status(400).json({
+      message: "numéro de rue et code postal doivent être des nombres",
+    });
   }
 
   try {
@@ -107,26 +197,24 @@ async function register(req, res) {
         birth: new Date(birth),
         mail,
         password: hashedPassword,
-        role,
+        role: "Citoyen", // Par défaut, tous les nouveaux utilisateurs sont des citoyens.
         sex,
         street_number: streetNumber,
         street_type,
         postal_code: postalCode,
-        address_complement,
+        address_complement: address_complement || null,
         city,
         country,
       },
     });
 
-    // Génération du JWT.
-    const token = signToken({
-      userId: createdUser.user_id,
-      role: createdUser.role,
-    });
+    const { accessToken, refreshToken } = await createSessionForUser(createdUser);
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, getRefreshCookieOptions());
 
     // Renvoie le token et l'utilisateur sans le mot de passe.
     return res.status(201).json({
-      token,
+      token: accessToken,
+      accessToken,
       user: sanitizeUser(createdUser),
     });
   } catch (error) {
@@ -160,20 +248,91 @@ async function login(req, res) {
       return res.status(401).json({ message: "Identifiants invalides" });
     }
 
-    // Génère un JWT pour la session.
-    const token = signToken({
-      userId: user.user_id,
-      role: user.role,
-    });
+    const { accessToken, refreshToken } = await createSessionForUser(user);
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, getRefreshCookieOptions());
 
     // Renvoie le token et les infos utilisateur.
     return res.status(200).json({
-      token,
+      token: accessToken,
+      accessToken,
       user: sanitizeUser(user),
     });
   } catch (error) {
     return res.status(500).json({ message: "Erreur serveur" });
   }
+}
+
+// Renouvelle la session via le refresh token en cookie.
+async function refresh(req, res) {
+  const refreshToken = getCookieValue(req, REFRESH_COOKIE_NAME);
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: "Refresh token manquant" });
+  }
+
+  try {
+    const decoded = verifyRefreshToken(refreshToken);
+    const user = await prisma.user.findUnique({
+      where: { user_id: decoded.userId },
+    });
+
+    if (!user || !user.refresh_token_hash || !user.refresh_token_expires_at) {
+      return res.status(401).json({ message: "Refresh token invalide" });
+    }
+
+    if (user.refresh_token_expires_at.getTime() < Date.now()) {
+      return res.status(401).json({ message: "Refresh token expiré" });
+    }
+
+    if (hashRefreshToken(refreshToken) !== user.refresh_token_hash) {
+      return res.status(401).json({ message: "Refresh token invalide" });
+    }
+
+    const { accessToken, refreshToken: nextRefreshToken } =
+      await createSessionForUser(user);
+
+    res.cookie(
+      REFRESH_COOKIE_NAME,
+      nextRefreshToken,
+      getRefreshCookieOptions()
+    );
+
+    return res.status(200).json({
+      token: accessToken,
+      accessToken,
+    });
+  } catch (error) {
+    return res.status(401).json({ message: "Refresh token invalide" });
+  }
+}
+
+// Invalide le refresh token courant et supprime le cookie.
+async function logout(req, res) {
+  const refreshToken = getCookieValue(req, REFRESH_COOKIE_NAME);
+
+  if (refreshToken) {
+    try {
+      const decoded = verifyRefreshToken(refreshToken);
+      await prisma.user.update({
+        where: { user_id: decoded.userId },
+        data: {
+          refresh_token_hash: null,
+          refresh_token_expires_at: null,
+        },
+      });
+    } catch (error) {
+      // Si le token est invalide, on continue quand même le logout côté client.
+    }
+  }
+
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/api/auth",
+  });
+
+  return res.status(200).json({ message: "Déconnexion réussie" });
 }
 
 // Retourne le profil de l'utilisateur connecté.
@@ -199,5 +358,7 @@ module.exports = {
   register,
   login,
   me,
+  refresh,
+  logout,
   ALLOWED_ROLES,
 };

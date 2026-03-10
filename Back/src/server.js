@@ -2,6 +2,7 @@
 require("dotenv").config();
 
 const express = require("express");
+const cors = require("cors");
 const authRoutes = require("./routes/auth.routes");
 const ressource = require("./routes/ressources.route");
 const statsRoutes = require("./routes/stats.route.js");
@@ -14,10 +15,16 @@ const notifications = require("./routes/notifications.route.js");
 const cors = require("cors"); // <--- AJOUT 1 : Import du module
 const usersRoutes = require("./routes/users.routes");
 const app = express();
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
 
 // Parse automatiquement les requêtes JSON.
-app.use(cors()); // 1. D'abord CORS
-app.use(express.json()); // 2. Ensuite le décodeur JSON (Indispensable !)
+app.use(
+  cors({
+    origin: CORS_ORIGIN,
+    credentials: true,
+  })
+);
+app.use(express.json());
 
 // Route pour vérifier que l'API fonctionne.
 app.get("/health", (req, res) => {
