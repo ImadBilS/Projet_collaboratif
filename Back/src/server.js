@@ -4,6 +4,10 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./routes/auth.routes");
+const ressource = require("./routes/ressources.route");
+
+const cors = require("cors"); // <--- AJOUT 1 : Import du module
+const usersRoutes = require("./routes/users.routes");
 const app = express();
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
 
@@ -23,6 +27,9 @@ app.get("/health", (req, res) => {
 
 // Monte les routes d'authentification sous /api/auth.
 app.use("/api/auth", authRoutes);
+app.use("/api/ressources", ressource);
+// Monte les routes CRUD utilisateur sous /api/users.
+app.use("/api/users", usersRoutes);
 
 // Si aucune route ne correspond, on renvoie un 404.
 app.use((req, res) => {
