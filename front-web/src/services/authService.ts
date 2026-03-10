@@ -1,7 +1,39 @@
-// L'adresse du Back-End (Demande à Matthieu si c'est bien le port 3000)
+// L'adresse du Back-End (
 const API_URL = "http://localhost:3000";
 
 export const authService = {
+  register: async (payload: {
+    firstname: string;
+    lastname: string;
+    birth: string;
+    mail: string;
+    password: string;
+    role: string;
+    sex: string;
+    street_number: number;
+    street_type: string;
+    postal_code: number;
+    address_complement: string | null;
+    city: string;
+    country: string;
+  }) => {
+    const response = await fetch(`${API_URL}/api/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Erreur lors de l'inscription");
+    }
+
+    return response.json();
+  },
+
   login: async (mail: string, password: string) => {
     try {
       // 1. On envoie la requête POST au vrai back-end

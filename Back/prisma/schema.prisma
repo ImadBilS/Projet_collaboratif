@@ -48,17 +48,20 @@ model User {
   street_number      Int
   street_type        String
   postal_code        Int
-  address_complement String
+  address_complement String?
   city               String
   country            String
+  refresh_token_hash String?
+  refresh_token_expires_at DateTime?
 
-  resources Resources[]
-  comments  Comments[]
-  replies   RepliesComment[]
-  groups    CanHave[]
-  reactions React[]
-  views     Views[]
-  reports   Report[]
+  resources          Resources[]
+  comments           Comments[]
+  replies            RepliesComment[]
+  groups             CanHave[]
+  reactions          React[]
+  views              Views[]
+  is_anonymized      Boolean   @default(false)
+  deleted_at         DateTime?
 }
 
 model GroupRelation {
@@ -120,7 +123,7 @@ model Comments {
 }
 
 model RepliesComment {
-  replie_id  Int      @id @default(autoincrement())
+  replie_id  Int    @id @default(autoincrement())
   text       String
   created_at DateTime @default(now()) // ← AJOUT
   user_id    Int
