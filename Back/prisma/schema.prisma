@@ -35,35 +35,35 @@ enum CommentStatusEnum {
 // =====================
 
 model User {
-  user_id            Int      @id @default(autoincrement())
+  user_id Int @id @default(autoincrement())
 
-  firstname          String
-  lastname           String
-  birth              DateTime
-  mail               String   @unique
-  password           String
-  role               String
-  sex                String
-  avatar             String?
-  bio                String?
-  street_number      Int
-  street_type        String
-  postal_code        Int
-  address_complement String?
-  city               String
-  country            String
-  refresh_token_hash String?
+  firstname                String
+  lastname                 String
+  birth                    DateTime
+  mail                     String    @unique
+  password                 String
+  role                     String
+  sex                      String
+  avatar                   String?
+  bio                      String?
+  street_number            Int
+  street_type              String
+  postal_code              Int
+  address_complement       String?
+  city                     String
+  country                  String
+  refresh_token_hash       String?
   refresh_token_expires_at DateTime?
 
-  resources Resources[]
-  comments  Comments[]
-  replies   RepliesComment[]
-  groups    CanHave[]
-  reactions React[]
-  views     Views[]
-  reports   Report[]
-  is_anonymized      Boolean   @default(false)
-  deleted_at         DateTime?
+  resources     Resources[]
+  comments      Comments[]
+  replies       RepliesComment[]
+  groups        CanHave[]
+  reactions     React[]
+  views         Views[]
+  reports       Report[]
+  is_anonymized Boolean          @default(false)
+  deleted_at    DateTime?
 }
 
 model GroupRelation {
@@ -97,12 +97,13 @@ enum ResourceCategory {
 }
 
 model Resources {
-  ressource_id Int             @id @default(autoincrement())
+  ressource_id Int            @id @default(autoincrement())
   wording      String
   visibility   VisibilityEnum
   user_id      Int
 
-  user      User       @relation(fields: [user_id], references: [user_id])
+  category  ResourceCategory[]
+  user      User               @relation(fields: [user_id], references: [user_id])
   comments  Comments[]
   reactions React[]
   views     Views[]
@@ -123,7 +124,7 @@ model Comments {
 }
 
 model RepliesComment {
-  replie_id  Int    @id @default(autoincrement())
+  replie_id  Int      @id @default(autoincrement())
   text       String
   created_at DateTime @default(now()) // ← AJOUT
   user_id    Int

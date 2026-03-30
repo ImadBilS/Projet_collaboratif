@@ -54,16 +54,16 @@ async function buildAnonymizedUserData(userId, nowMs = Date.now()) {
 }
 
 function resolveTargetUserId(req, res) {
-  const authUserId = req.user?.userId;
+  const authUserId = req.user?.user_id;
   if (!authUserId) {
     res.status(401).json({ message: "Non authentifie" });
     return null;
   }
 
-  if (req.params?.userId) {
-    const paramUserId = Number.parseInt(req.params.userId, 10);
+  if (req.params?.user_id) {
+    const paramUserId = Number.parseInt(req.params.user_id, 10);
     if (Number.isNaN(paramUserId)) {
-      res.status(400).json({ message: "userId invalide" });
+      res.status(400).json({ message: "user_id invalide" });
       return null;
     }
     if (paramUserId !== authUserId) {
@@ -117,9 +117,9 @@ async function createUserProfile(req, res) {
 
 // READ: recuperer un utilisateur par id
 async function getUserById(req, res) {
-  const userId = Number.parseInt(req.params.userId, 10);
+  const userId = Number.parseInt(req.params.user_id, 10);
   if (Number.isNaN(userId)) {
-    return res.status(400).json({ message: "userId invalide" });
+    return res.status(400).json({ message: "user_id invalide" });
   }
   try {
     const user = await prisma.user.findUnique({
@@ -261,10 +261,52 @@ async function deleteUserProfile(req, res) {
   }
 }
 
+async function updateUserRole(req, res) {
+  const authUser = req.user;
+
+  // Seul un admin peut changer un rôle
+  if (authUser.role !== "Administrateur") {
+    return res.status(403).json({ message: "Accès interdit" });
+  }
+
+  const userId = Number.parseInt(req.params.user_id, 10);
+  if (Number.isNaN(userId)) {
+    return res.status(400).json({ message: "user_id invalide" });
+  }
+
+  const { role } = req.body;
+
+  const ALLOWED_ROLES = ["Citoyen", "Modérateur", "Administrateur"];
+  if (!ALLOWED_ROLES.includes(role)) {
+    return res.status(400).json({ message: "Rôle invalide" });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { user_id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur introuvable" });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { user_id: userId },
+      data: { role },
+    });
+
+    return res.status(200).json({ user: sanitizeUser(updatedUser) });
+  } catch (error) {
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+
 module.exports = {
   buildAnonymizedUserData,
   createUserProfile,
   getUserById,
   updateUserProfile,
   deleteUserProfile,
+  updateUserRole,
 };

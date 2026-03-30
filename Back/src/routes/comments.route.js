@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   addComment,
+  getCommentById,
   deleteComment,
   getCommentsByResource,
   updateComment,
@@ -10,11 +11,12 @@ const { authenticateJWT } = require("../middlewares/auth.middleware");
 
 const router = express.Router();
 
-// Commentaires 
-router.post("/:id/comment", authenticateJWT, addComment);
-router.delete("/comments/:id", authenticateJWT, deleteComment);
-router.get("/:id/comments", authenticateJWT, getCommentsByResource);
-router.put("/comments/:id", authenticateJWT, updateComment);
-router.patch("comments/:id/hide", authenticateJWT, hideComment);
+// Commentaires
+router.post("/:id", authenticateJWT, addComment);
+router.delete("/:id", authenticateJWT, deleteComment);
+router.get("/:id/ressource", authenticateJWT, getCommentsByResource);
+router.get("/:id", authenticateJWT, getCommentById);
+router.put("/:id", authenticateJWT, updateComment);
+router.patch("/:id/hide", authenticateJWT, hideComment);
 
 module.exports = router;

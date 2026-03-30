@@ -4,7 +4,7 @@ const { prisma } = require("../db/prisma");
 async function getNotifications(req, res) {
   const role = req.user.role;
 
-  if (role !== "ADMIN" && role !== "MODERATOR") {
+  if (role !== "Administrateur" && role !== "Modérateur") {
     return res.status(403).json({ message: "Accès refusé" });
   }
 

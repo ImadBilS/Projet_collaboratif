@@ -27,6 +27,42 @@ async function addComment(req, res) {
   }
 }
 
+async function getCommentById(req, res) {
+  try {
+    const commentId = Number(req.params.id);
+
+    if (Number.isNaN(commentId)) {
+      return res.status(400).json({ message: "ID invalide." });
+    }
+
+    const comment = await prisma.comments.findUnique({
+      where: { comment_id: commentId },
+      include: {
+        user: {
+          select: { firstname: true, lastname: true, avatar: true },
+        },
+        replies: {
+          include: {
+            user: {
+              select: { firstname: true, lastname: true, avatar: true },
+            },
+          },
+          orderBy: { replie_id: "asc" },
+        },
+      },
+    });
+
+    if (!comment) {
+      return res.status(404).json({ message: "Commentaire introuvable." });
+    }
+
+    return res.json(comment);
+  } catch (error) {
+    console.error("Erreur lors de la récupération du commentaire :", error);
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
 // Supprimer un commentaire
 async function deleteComment(req, res) {
   try {
@@ -101,7 +137,6 @@ async function getCommentsByResource(req, res) {
 async function updateComment(req, res) {
   try {
     const userId = req.user.user_id;
-    const userRole = req.user.role;
     const commentId = Number(req.params.id);
     const { text } = req.body;
 
@@ -159,6 +194,7 @@ async function hideComment(req, res) {
 
 module.exports = {
   addComment,
+  getCommentById,
   deleteComment,
   getCommentsByResource,
   updateComment,

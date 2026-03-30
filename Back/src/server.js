@@ -12,7 +12,6 @@ const reacts = require("./routes/react.route.js");
 const reports = require("./routes/report.route.js");
 const notifications = require("./routes/notifications.route.js");
 
-const cors = require("cors"); // <--- AJOUT 1 : Import du module
 const usersRoutes = require("./routes/users.routes");
 const app = express();
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
@@ -22,7 +21,7 @@ app.use(
   cors({
     origin: CORS_ORIGIN,
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 

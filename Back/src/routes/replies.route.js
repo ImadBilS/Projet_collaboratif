@@ -10,9 +10,9 @@ const { authenticateJWT } = require("../middlewares/auth.middleware");
 const router = express.Router();
 
 // Réponses aux commentaires
-router.post("/comments/:id/reply", authenticateJWT, addReply);
-router.get("/comments/:id/replies", authenticateJWT, getReplies);
-router.put("/replies/:id", authenticateJWT, updateReply);
-router.delete("/replies/:id", authenticateJWT, deleteReply);
+router.post("/:id/reply", authenticateJWT, addReply);
+router.get("/:id/replies", authenticateJWT, getReplies);
+router.put("/:id", authenticateJWT, updateReply);
+router.delete("/:id", authenticateJWT, deleteReply);
 
 module.exports = router;

@@ -197,7 +197,7 @@ async function register(req, res) {
         birth: new Date(birth),
         mail,
         password: hashedPassword,
-        role: "Citoyen", // Par défaut, tous les nouveaux utilisateurs sont des citoyens.
+        role,
         sex,
         street_number: streetNumber,
         street_type,
@@ -340,7 +340,7 @@ async function me(req, res) {
   try {
     // Charge l'utilisateur à partir de l'id stocké dans le token.
     const user = await prisma.user.findUnique({
-      where: { user_id: req.user.userId },
+      where: { user_id: req.user.user_id },
     });
 
     if (!user) {
