@@ -6,9 +6,9 @@ import { allowedVisibilities, allowedCategories } from "../constants/ressourceOp
 
 export default function EditResourceModal({ resource, open, onClose, onUpdated }) {
     const [fields, setFields] = useState([]);
-
+    
     useEffect(() => {
-        if (resource) {
+        if (resource) {            
             setFields([
                 { name: "wording", label: "Titre", type: "text", defaultValue: resource.wording },
                 { name: "description", label: "Description", type: "text", defaultValue: resource.description },
@@ -28,18 +28,24 @@ export default function EditResourceModal({ resource, open, onClose, onUpdated }
                 {
                     name: "category",
                     label: "Catégories",
-                    type: "multiselect",   // ← IMPORTANT
-                    defaultValue: resource.category || [], // tableau
-                    options: allowedCategories.map((c) => ({
-                        value: c,
-                        label: c.replaceAll("_", " ").toLowerCase().replace(/^\w/, (x) => x.toUpperCase()),
+                    type: "multiselect",
+                    defaultValue: Array.isArray(resource.category)
+                        ? resource.category
+                        : [resource.category], // toujours un tableau
+                        options: allowedCategories.map((c) => ({
+                            value: c,
+                            label: c
+                            .replaceAll("_", " ")
+                            .toLowerCase()
+                            .replace(/^\w/, (x) => x.toUpperCase()),
                     })),
-                },
+                }
             ]);
         }
     }, [resource]);
-
+    
     const handleSubmit = async (values) => {
+        console.log("Updating resource with values:", values);
         await updateRessource(resource.ressource_id, values);
         if (onUpdated) onUpdated();
         onClose();
@@ -50,7 +56,7 @@ export default function EditResourceModal({ resource, open, onClose, onUpdated }
             open={open}
             onClose={onClose}
             title="Modifier la ressource"
-            titleVariant="h5"   
+            titleVariant="h5"
             fields={fields}
             onSubmit={handleSubmit}
             submitLabel="Mettre à jour"

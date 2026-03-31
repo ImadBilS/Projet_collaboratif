@@ -26,7 +26,7 @@ export default function CreateResourceModal({ onCreated }) {
         {
             name: "category",
             label: "Catégorie",
-            type: "multiselect",
+            type: "select",
             options: allowedCategories.map((c) => ({
                 value: c,
                 label: c.replaceAll("_", " ").toLowerCase().replace(/^\w/, (x) => x.toUpperCase()),

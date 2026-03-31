@@ -1,5 +1,47 @@
 const { prisma } = require("../db/prisma");
 
+function normalizeCategories(category) {
+  const categories = Array.isArray(category) ? category : [category];
+
+  return categories
+    .filter(Boolean)
+    .map((item) => String(item).trim().toUpperCase());
+}
+
+function normalizeTags(tags) {
+  const values = Array.isArray(tags) ? tags : [tags];
+
+  return values
+    .filter(Boolean)
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+}
+
+  const allowedVisibilities = new Set(["PUBLIC", "PRIVATE"]);
+  const allowedCategories = new Set([
+    "FOOD",
+    "CLOTHES",
+    "TOOLS",
+    "TRANSPORT",
+    "HOUSING",
+    "SERVICES",
+    "EDUCATION",
+    "HEALTH",
+    "SOCIAL_SUPPORT",
+    "EVENTS",
+    "COMMUNITY",
+    "VOLUNTEERING",
+    "DONATION",
+    "JOB_HELP",
+    "CHILDCARE",
+    "ELDERLY_HELP",
+    "PETS",
+    "SPORT",
+    "CULTURE",
+    "OTHER",
+  ]);
+
+
 //Contrôleur création de ressource
 async function create(req, res) {
   const userId = req.user.user_id;
@@ -9,6 +51,8 @@ async function create(req, res) {
     content,
     visibility,
     category,
+    city,
+    description,
     summary,
     format,
     relation,
@@ -20,16 +64,15 @@ async function create(req, res) {
   const normalizedVisibility = visibility?.toUpperCase();
   const normalizedCategory = normalizeCategories(category);
 
-  const allowedVisibilities = ["PUBLIC", "PRIVATE"];
 
-  if (!allowedVisibilities.includes(normalizedVisibility)) {
+  if (!allowedVisibilities.has(normalizedVisibility)) {
     return res.status(400).json({ message: "Visibility invalide." });
   }
 
   // Vérifier la catégorie
   if (
     normalizedCategory.length === 0 ||
-    normalizedCategory.some((item) => !allowedCategories.includes(item))
+    normalizedCategory.some((item) => !allowedCategories.has(item))
   ) {
     return res.status(400).json({ message: "Catégorie invalide." });
   }
@@ -47,6 +90,8 @@ async function create(req, res) {
       summary: summary?.trim() || null,
       visibility: normalizedVisibility,
       category: normalizedCategory,
+      city: city?.trim() || null,
+      description: description?.trim() || null,
       format: format?.trim() || null,
       relation: relation?.trim() || null,
       tags: normalizeTags(tags),
@@ -57,15 +102,6 @@ async function create(req, res) {
         connect: {
           user_id: userId,
         },
-        user: { connect: { user_id: userId } },
-        category: {
-          create: category.map((c) => ({
-            category: c.toUpperCase(),
-          })),
-        },
-      },
-      include: {
-        category: true,
       },
     },
   });
@@ -82,6 +118,8 @@ async function getRessources(req, res) {
         wording: true,
         content: true,
         summary: true,
+        city: true,
+        description: true,
         visibility: true,
         user_id: true,
         category: true,
@@ -103,24 +141,8 @@ async function getRessources(req, res) {
         },
       },
       orderBy: { ressource_id: "desc" },
-      include: {
-        user: {
-          select: {
-            firstname: true,
-            lastname: true,
-          },
-        },
-        category: true,
-      },
     });
     res.status(200).json(ressources);
-
-    // Transformer les catégories pivot → tableau simple
-    const formatted = ressources.map((r) => ({
-      ...r,
-      category: r.category.map((c) => c.category),
-    }));
-    res.status(200).json(formatted);
   } catch (error) {
     console.error("Erreur lors de la récupération des ressources :", error);
     res.status(500).json({ message: "Erreur serveur" });
@@ -176,26 +198,19 @@ async function getRessourceById(req, res) {
 
     const ressource = await prisma.resources.findUnique({
       where: { ressource_id: ressourceId },
-      include: {
-        user: { select: { firstname: true, lastname: true } },
+      select: {
+        ressource_id: true,
+        wording: true,
+        content: true,
+        summary: true,
+        city: true,
+        description: true,
+        visibility: true,
         category: true,
-      },
-      include: {
-        user: {
-          select: {
-            firstname: true,
-            lastname: true,
-            city: true,
-          },
-        },
-        _count: {
-          select: {
-            reactions: true,
-            comments: true,
-          },
-        },
-      },
-      include: {
+        format: true,
+        relation: true,
+        tags: true,
+        featured: true,
         user: {
           select: {
             firstname: true,
@@ -216,13 +231,7 @@ async function getRessourceById(req, res) {
       return res.status(404).json({ message: "Ressource non trouvée" });
     }
 
-    // Transformer les catégories
-    const formatted = {
-      ...ressource,
-      category: ressource.category.map((c) => c.category),
-    };
-
-    res.json(formatted);
+    res.json(ressource);
   } catch (error) {
     console.error("Erreur lors de la récupération de la ressource :", error);
     res.status(500).json({ message: "Erreur serveur" });
@@ -377,6 +386,8 @@ async function updateRessource(req, res) {
     content,
     visibility,
     category,
+    city,
+    description,
     summary,
     format,
     relation,
@@ -388,7 +399,6 @@ async function updateRessource(req, res) {
   const normalizedCategory =
     category === undefined ? undefined : normalizeCategories(category);
 
-  const allowedVisibilities = ["PUBLIC", "PRIVATE"];
 
   const ressource = await prisma.resources.findUnique({
     where: { ressource_id: ressourceId },
@@ -404,14 +414,14 @@ async function updateRessource(req, res) {
     return res.status(403).json({ message: "Accès refusé." });
   }
 
-  if (visibility && !allowedVisibilities.includes(normalizedVisibility)) {
+  if (visibility && !allowedVisibilities.has(normalizedVisibility)) {
     return res.status(400).json({ message: "Visibility invalide." });
   }
 
   if (
     normalizedCategory &&
     (normalizedCategory.length === 0 ||
-      normalizedCategory.some((item) => !allowedCategories.includes(item)))
+      normalizedCategory.some((item) => !allowedCategories.has(item)))
   ) {
     return res.status(400).json({ message: "Catégorie invalide." });
   }
@@ -423,22 +433,16 @@ async function updateRessource(req, res) {
       ...(wording !== undefined && { wording }),
       ...(content !== undefined && { content: content?.trim() || null }),
       ...(summary !== undefined && { summary: summary?.trim() || null }),
+      ...(city !== undefined && { city: city?.trim() || null }),
+      ...(description !== undefined && { description: description?.trim() || null }),
       ...(normalizedVisibility && { visibility: normalizedVisibility }),
       ...(format !== undefined && { format: format?.trim() || null }),
       ...(relation !== undefined && { relation: relation?.trim() || null }),
       ...(tags !== undefined && { tags: normalizeTags(tags) }),
       ...(featured !== undefined && { featured: Boolean(featured) }),
-      ...(normalizedCategory && {
-        category: {
-          deleteMany: {},
-          create: normalizedCategory.map((c) => ({
-            category: c,
-          })),
-        },
+      ...(normalizedCategory !== undefined && {
+        category: normalizedCategory,
       }),
-    },
-    include: {
-      category: true,
     },
   });
 
@@ -468,20 +472,3 @@ module.exports = {
   updateRessource,
   getRessourcesByCategory,
 };
-
-function normalizeCategories(category) {
-  const categories = Array.isArray(category) ? category : [category];
-
-  return categories
-    .filter(Boolean)
-    .map((item) => String(item).trim().toUpperCase());
-}
-
-function normalizeTags(tags) {
-  const values = Array.isArray(tags) ? tags : [tags];
-
-  return values
-    .filter(Boolean)
-    .map((item) => String(item).trim())
-    .filter(Boolean);
-}

@@ -112,7 +112,7 @@ model Resources {
   tags         String[]       @default([])
   featured     Boolean        @default(false)
 
-  category  ResourceCategory[]
+  category  CategoryEnum[]
   user      User               @relation(fields: [user_id], references: [user_id])
   comments  Comments[]
   reactions React[]
@@ -123,12 +123,6 @@ model Resources {
 
 
 
-model ResourceCategory {
-  id          Int          @id @default(autoincrement())
-  category    CategoryEnum
-  resource_id Int
-  resource    Resources    @relation(fields: [resource_id], references: [ressource_id])
-}
 
 model Comments {
   comment_id   Int               @id @default(autoincrement())
