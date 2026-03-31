@@ -1,6 +1,7 @@
 // Routes CRUD utilisateur (Avatar, Bio, Localisation).
 const express = require("express");
 const {
+  listUsers,
   createUserProfile,
   getUserById,
   updateUserProfile,
@@ -12,9 +13,6 @@ const {
 
 const { authenticateJWT } = require("../middlewares/auth.middleware");
 const router = express.Router();
-
-// GET ALL USERS (ADMIN ONLY)
-router.get("/", authenticateJWT, getAllUsers);
 
 // CREATE
 router.post("/", authenticateJWT, createUserProfile);

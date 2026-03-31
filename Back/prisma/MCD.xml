@@ -1,0 +1,115 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="mld-app" name="MLD">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="user" value="USER&#xa;────────────&#xa;PK user_id : Int&#xa;firstname : String&#xa;lastname : String&#xa;birth : DateTime&#xa;UK mail : String&#xa;password : String&#xa;role : String&#xa;sex : String&#xa;avatar : String?&#xa;bio : String?&#xa;street_number : Int&#xa;street_type : String&#xa;postal_code : Int&#xa;address_complement : String?&#xa;city : String&#xa;country : String&#xa;refresh_token_hash : String?&#xa;refresh_token_expires_at : DateTime?&#xa;is_anonymized : Boolean&#xa;deleted_at : DateTime?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="270" height="360" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="resources" value="RESOURCES&#xa;────────────&#xa;PK ressource_id : Int&#xa;wording : String&#xa;visibility : VisibilityEnum&#xa;FK user_id : Int&#xa;category : ResourceCategory[]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="390" y="70" width="250" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="comments" value="COMMENTS&#xa;────────────&#xa;PK comment_id : Int&#xa;text : String&#xa;status : CommentStatusEnum&#xa;FK user_id : Int&#xa;FK ressource_id : Int&#xa;created_at : DateTime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="390" y="280" width="250" height="170" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="replies" value="REPLIES_COMMENT&#xa;────────────&#xa;PK replie_id : Int&#xa;text : String&#xa;created_at : DateTime&#xa;FK user_id : Int&#xa;FK comment_id : Int" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="390" y="500" width="250" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="report" value="REPORT&#xa;────────────&#xa;PK report_id : Int&#xa;reason : String&#xa;FK user_id : Int&#xa;FK comment_id : Int?&#xa;FK replie_id : Int?&#xa;created_at : DateTime&#xa;resolved : Boolean" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f4cccc;strokeColor=#cc0000;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="730" y="360" width="250" height="180" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="grouprelation" value="GROUP_RELATION&#xa;────────────&#xa;PK relation_id : Int&#xa;wording : String" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="60" width="210" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="group" value="GROUP&#xa;────────────&#xa;PK group_id : Int&#xa;name : String&#xa;FK relation_id : Int" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ead1dc;strokeColor=#c27ba0;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="220" width="210" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="canhave" value="CAN_HAVE&#xa;────────────&#xa;PK,FK user_id : Int&#xa;PK,FK group_id : Int" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d9d2e9;strokeColor=#8e7cc3;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="390" width="210" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="react" value="REACT&#xa;────────────&#xa;PK,FK user_id : Int&#xa;PK,FK ressource_id : Int&#xa;created_at : DateTime&#xa;reaction_type : ReactionTypeEnum?" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cfe2f3;strokeColor=#3d85c6;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="730" y="70" width="250" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="views" value="VIEWS&#xa;────────────&#xa;PK,FK user_id : Int&#xa;PK,FK ressource_id : Int&#xa;created_at : DateTime&#xa;view_number : Int" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d0e0e3;strokeColor=#76a5af;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="730" y="220" width="250" height="130" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="notification" value="NOTIFICATION&#xa;────────────&#xa;PK notification_id : Int&#xa;type : String&#xa;message : String&#xa;created_at : DateTime&#xa;is_read : Boolean" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#666666;fontFamily=Helvetica;fontSize=12;align=left;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="560" width="210" height="120" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="resources">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e2" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="comments">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e3" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="replies">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e4" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="report">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e5" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="react">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e6" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="views">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e7" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="resources" target="comments">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e8" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="resources" target="react">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e9" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="resources" target="views">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e10" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="comments" target="replies">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e11" value="0,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;" edge="1" parent="1" source="comments" target="report">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e12" value="0,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=1;" edge="1" parent="1" source="replies" target="report">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e13" value="1,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="grouprelation" target="group">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e14" value="N,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="canhave">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e15" value="N,N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="1" source="group" target="canhave">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

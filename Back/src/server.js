@@ -12,6 +12,8 @@ const reacts = require("./routes/react.route.js");
 const reports = require("./routes/report.route.js");
 const notifications = require("./routes/notifications.route.js");
 const usersRoutes = require("./routes/users.routes");
+const collections = require("./routes/collections.route.js");
+const activities = require("./routes/activities.route.js");
 const app = express();
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
 
@@ -42,6 +44,8 @@ app.use("/replies", replies);
 app.use("/reacts", reacts);
 app.use("/reports", reports);
 app.use("/notifications", notifications);
+app.use("/collections", collections);
+app.use("/activities", activities);
 
 // Si aucune route ne correspond, on renvoie un 404.
 app.use((req, res) => {

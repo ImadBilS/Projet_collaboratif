@@ -1,4 +1,5 @@
 const { prisma } = require("../db/prisma");
+const { canModerate } = require("../utils/roles");
 
 // Répondre à un commentaire
 async function addReply(req, res) {
@@ -110,10 +111,7 @@ async function deleteReply(req, res) {
     }
 
     const isOwner = reply.user_id === userId;
-    const isAdmin = userRole === "ADMIN";
-    const isModerator = userRole === "MODERATOR";
-
-    if (!isOwner && !isAdmin && !isModerator) {
+    if (!isOwner && !canModerate(userRole)) {
       return res.status(403).json({ message: "Accès refusé." });
     }
 

@@ -55,18 +55,24 @@ async function buildAnonymizedUserData(userId, nowMs = Date.now()) {
 
 function resolveTargetUserId(req, res) {
   const authUserId = req.user?.user_id;
+  const authRole = req.user?.role;
   if (!authUserId) {
     res.status(401).json({ message: "Non authentifie" });
     return null;
   }
 
-  if (req.params?.user_id) {
-    const paramUserId = Number.parseInt(req.params.user_id, 10);
+  const routeUserId = req.params?.user_id ?? req.params?.userId;
+
+  if (routeUserId) {
+    const paramUserId = Number.parseInt(routeUserId, 10);
     if (Number.isNaN(paramUserId)) {
       res.status(400).json({ message: "user_id invalide" });
       return null;
     }
-    if (paramUserId !== authUserId) {
+    const canManageOtherUsers =
+      authRole === "Administrateur" || authRole === "Modérateur";
+
+    if (paramUserId !== authUserId && !canManageOtherUsers) {
       res.status(403).json({ message: "Acces interdit" });
       return null;
     }
@@ -74,6 +80,36 @@ function resolveTargetUserId(req, res) {
   }
 
   return authUserId;
+}
+
+async function listUsers(req, res) {
+  const authRole = req.user?.role;
+
+  if (authRole !== "Administrateur" && authRole !== "Modérateur") {
+    return res.status(403).json({ message: "Accès interdit" });
+  }
+
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        user_id: true,
+        firstname: true,
+        lastname: true,
+        mail: true,
+        role: true,
+        city: true,
+        country: true,
+        bio: true,
+        is_anonymized: true,
+        deleted_at: true,
+      },
+      orderBy: { user_id: "desc" },
+    });
+
+    return res.status(200).json({ users });
+  } catch (error) {
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
 }
 
 // CREATE: creer un profil utilisateur
@@ -270,7 +306,7 @@ async function updateUserRole(req, res) {
     return res.status(403).json({ message: "Accès interdit" });
   }
 
-  const userId = Number.parseInt(req.params.user_id, 10);
+  const userId = Number.parseInt(req.params.user_id ?? req.params.userId, 10);
   if (Number.isNaN(userId)) {
     return res.status(400).json({ message: "user_id invalide" });
   }
@@ -415,6 +451,7 @@ module.exports = { updateUserAccount };
 module.exports = {
   getAllUsers,
   buildAnonymizedUserData,
+  listUsers,
   createUserProfile,
   getUserById,
   updateUserProfile,

@@ -4,6 +4,7 @@ const {
   getCommentById,
   deleteComment,
   getCommentsByResource,
+  getPublicCommentsByResource,
   updateComment,
   hideComment,
 } = require("../controllers/comments.controller");
@@ -12,6 +13,7 @@ const { authenticateJWT } = require("../middlewares/auth.middleware");
 const router = express.Router();
 
 // Commentaires
+router.get("/public/:id/ressource", getPublicCommentsByResource);
 router.post("/:id", authenticateJWT, addComment);
 router.delete("/:id", authenticateJWT, deleteComment);
 router.get("/:id/ressource", authenticateJWT, getCommentsByResource);

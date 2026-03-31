@@ -3,9 +3,22 @@ const { prisma } = require("../db/prisma");
 //Contrôleur création de ressource
 async function create(req, res) {
   const userId = req.user.user_id;
-  const { wording, visibility, category = [] } = req.body;
-
+  // Récupération des données envoyées dans le body de la requête
+  const {
+    wording,
+    content,
+    visibility,
+    category,
+    summary,
+    format,
+    relation,
+    tags,
+    featured,
+  } = req.body;
+  // Normalisation de la visibilité pour correspondre à l’ENUM Prisma
+  // (ex : "public" → "PUBLIC")
   const normalizedVisibility = visibility?.toUpperCase();
+  const normalizedCategory = normalizeCategories(category);
 
   const allowedVisibilities = ["PUBLIC", "PRIVATE"];
 
@@ -13,6 +26,15 @@ async function create(req, res) {
     return res.status(400).json({ message: "Visibility invalide." });
   }
 
+  // Vérifier la catégorie
+  if (
+    normalizedCategory.length === 0 ||
+    normalizedCategory.some((item) => !allowedCategories.includes(item))
+  ) {
+    return res.status(400).json({ message: "Catégorie invalide." });
+  }
+
+  // Vérifie que le champ wording est bien présent
   if (!wording) {
     return res.status(400).json({ message: "Le champ 'wording' est requis." });
   }
@@ -21,16 +43,30 @@ async function create(req, res) {
   const resource = await prisma.resources.create({
     data: {
       wording,
+      content: content?.trim() || null,
+      summary: summary?.trim() || null,
       visibility: normalizedVisibility,
-      user: { connect: { user_id: userId } },
-      category: {
-        create: category.map((c) => ({
-          category: c.toUpperCase(),
-        })),
+      category: normalizedCategory,
+      format: format?.trim() || null,
+      relation: relation?.trim() || null,
+      tags: normalizeTags(tags),
+      featured: Boolean(featured),
+      // Association de la ressource à l’utilisateur connecté
+      // via la relation Prisma (clé unique user_id)
+      user: {
+        connect: {
+          user_id: userId,
+        },
+        user: { connect: { user_id: userId } },
+        category: {
+          create: category.map((c) => ({
+            category: c.toUpperCase(),
+          })),
+        },
       },
-    },
-    include: {
-      category: true,
+      include: {
+        category: true,
+      },
     },
   });
 
@@ -41,6 +77,32 @@ async function create(req, res) {
 async function getRessources(req, res) {
   try {
     const ressources = await prisma.resources.findMany({
+      select: {
+        ressource_id: true,
+        wording: true,
+        content: true,
+        summary: true,
+        visibility: true,
+        user_id: true,
+        category: true,
+        format: true,
+        relation: true,
+        tags: true,
+        featured: true,
+        user: {
+          select: {
+            firstname: true,
+            lastname: true,
+            city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
+          },
+        },
+      },
+      orderBy: { ressource_id: "desc" },
       include: {
         user: {
           select: {
@@ -51,6 +113,7 @@ async function getRessources(req, res) {
         category: true,
       },
     });
+    res.status(200).json(ressources);
 
     // Transformer les catégories pivot → tableau simple
     const formatted = ressources.map((r) => ({
@@ -69,15 +132,35 @@ async function getRessourcesUser(req, res) {
   try {
     const userId = req.user.user_id;
     const ressources = await prisma.resources.findMany({
-      where: { user_id: userId },
-      include: {
+      where: {
+        user_id: userId,
+      },
+      select: {
+        ressource_id: true,
+        wording: true,
+        content: true,
+        summary: true,
+        visibility: true,
+        user_id: true,
+        category: true,
+        format: true,
+        relation: true,
+        tags: true,
+        featured: true,
         user: {
           select: {
             firstname: true,
             lastname: true,
+            city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
           },
         },
       },
+      orderBy: { ressource_id: "desc" },
     });
     res.status(200).json(ressources);
   } catch (error) {
@@ -96,6 +179,36 @@ async function getRessourceById(req, res) {
       include: {
         user: { select: { firstname: true, lastname: true } },
         category: true,
+      },
+      include: {
+        user: {
+          select: {
+            firstname: true,
+            lastname: true,
+            city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
+            comments: true,
+          },
+        },
+      },
+      include: {
+        user: {
+          select: {
+            firstname: true,
+            lastname: true,
+            city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
+            comments: true,
+          },
+        },
       },
     });
 
@@ -120,15 +233,35 @@ async function getRessourceById(req, res) {
 async function getPublicRessources(req, res) {
   try {
     const ressources = await prisma.resources.findMany({
-      where: { visibility: "PUBLIC" },
-      include: {
+      where: {
+        visibility: "PUBLIC",
+      },
+      select: {
+        ressource_id: true,
+        wording: true,
+        content: true,
+        summary: true,
+        visibility: true,
+        user_id: true,
+        category: true,
+        format: true,
+        relation: true,
+        tags: true,
+        featured: true,
         user: {
           select: {
             firstname: true,
             lastname: true,
+            city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
           },
         },
       },
+      orderBy: { ressource_id: "desc" },
     });
     res.status(200).json(ressources);
   } catch (error) {
@@ -199,20 +332,23 @@ async function getNearbyRessourcesForMe(req, res) {
 async function deleteRessource(req, res) {
   try {
     const userId = req.user.user_id;
+    const role = req.user.role;
     const ressourceId = Number.parseInt(req.params.id, 10);
 
-    // Vérifie que l'utilisateur est bien le propriétaire de la ressource
     const existingResource = await prisma.resources.findUnique({
       where: {
         ressource_id: ressourceId,
-        user_id: userId,
       },
     });
 
     if (!existingResource) {
-      return res
-        .status(404)
-        .json({ message: "Ressource non trouvée ou accès refusé." });
+      return res.status(404).json({ message: "Ressource non trouvée." });
+    }
+
+    const canModerate = role === "Administrateur" || role === "Modérateur";
+
+    if (existingResource.user_id !== userId && !canModerate) {
+      return res.status(403).json({ message: "Accès refusé." });
     }
 
     // Supprime la ressource
@@ -232,11 +368,25 @@ async function deleteRessource(req, res) {
 //Modifer une ressource (optionnel)
 async function updateRessource(req, res) {
   const userId = req.user.user_id;
+  const role = req.user.role;
   const ressourceId = Number(req.params.id);
 
-  const { wording, visibility, category = [] } = req.body;
+  //Récupérer les nouvelles données de la ressource depuis le corps de la requête
+  const {
+    wording,
+    content,
+    visibility,
+    category,
+    summary,
+    format,
+    relation,
+    tags,
+    featured,
+  } = req.body;
 
   const normalizedVisibility = visibility?.toUpperCase();
+  const normalizedCategory =
+    category === undefined ? undefined : normalizeCategories(category);
 
   const allowedVisibilities = ["PUBLIC", "PRIVATE"];
 
@@ -248,7 +398,9 @@ async function updateRessource(req, res) {
     return res.status(404).json({ message: "Ressource non trouvée." });
   }
 
-  if (ressource.user_id !== userId) {
+  const canModerate = role === "Administrateur" || role === "Modérateur";
+
+  if (ressource.user_id !== userId && !canModerate) {
     return res.status(403).json({ message: "Accès refusé." });
   }
 
@@ -256,18 +408,34 @@ async function updateRessource(req, res) {
     return res.status(400).json({ message: "Visibility invalide." });
   }
 
-  // Mise à jour
+  if (
+    normalizedCategory &&
+    (normalizedCategory.length === 0 ||
+      normalizedCategory.some((item) => !allowedCategories.includes(item)))
+  ) {
+    return res.status(400).json({ message: "Catégorie invalide." });
+  }
+
+  // Met à jour la ressource
   const updated = await prisma.resources.update({
     where: { ressource_id: ressourceId },
     data: {
-      wording,
-      visibility: normalizedVisibility,
-      category: {
-        deleteMany: {}, // supprime toutes les anciennes catégories
-        create: category.map((c) => ({
-          category: c.toUpperCase(),
-        })),
-      },
+      ...(wording !== undefined && { wording }),
+      ...(content !== undefined && { content: content?.trim() || null }),
+      ...(summary !== undefined && { summary: summary?.trim() || null }),
+      ...(normalizedVisibility && { visibility: normalizedVisibility }),
+      ...(format !== undefined && { format: format?.trim() || null }),
+      ...(relation !== undefined && { relation: relation?.trim() || null }),
+      ...(tags !== undefined && { tags: normalizeTags(tags) }),
+      ...(featured !== undefined && { featured: Boolean(featured) }),
+      ...(normalizedCategory && {
+        category: {
+          deleteMany: {},
+          create: normalizedCategory.map((c) => ({
+            category: c,
+          })),
+        },
+      }),
     },
     include: {
       category: true,
@@ -300,3 +468,20 @@ module.exports = {
   updateRessource,
   getRessourcesByCategory,
 };
+
+function normalizeCategories(category) {
+  const categories = Array.isArray(category) ? category : [category];
+
+  return categories
+    .filter(Boolean)
+    .map((item) => String(item).trim().toUpperCase());
+}
+
+function normalizeTags(tags) {
+  const values = Array.isArray(tags) ? tags : [tags];
+
+  return values
+    .filter(Boolean)
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+}

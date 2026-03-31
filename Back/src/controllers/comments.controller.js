@@ -1,4 +1,5 @@
 const { prisma } = require("../db/prisma");
+const { canModerate } = require("../utils/roles");
 
 // Ajouter un commentaire
 async function addComment(req, res) {
@@ -67,7 +68,7 @@ async function getCommentById(req, res) {
 async function deleteComment(req, res) {
   try {
     const userId = req.user.user_id;
-    const userRole = req.user.role; // "ADMIN", "MODERATOR", "USER"
+    const userRole = req.user.role;
     const commentId = Number(req.params.id);
 
     // Vérifier que le commentaire existe
@@ -84,10 +85,7 @@ async function deleteComment(req, res) {
     // - admin
     // - modérateur
     const isOwner = comment.user_id === userId;
-    const isAdmin = userRole === "ADMIN";
-    const isModerator = userRole === "MODERATOR";
-
-    if (!isOwner && !isAdmin && !isModerator) {
+    if (!isOwner && !canModerate(userRole)) {
       return res.status(403).json({ message: "Accès refusé." });
     }
 
@@ -130,6 +128,51 @@ async function getCommentsByResource(req, res) {
   } catch (error) {
     console.error("Erreur lors de la récupération des commentaires :", error);
     res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+async function getPublicCommentsByResource(req, res) {
+  try {
+    const ressourceId = Number(req.params.id);
+
+    const resource = await prisma.resources.findUnique({
+      where: { ressource_id: ressourceId },
+      select: { visibility: true },
+    });
+
+    if (!resource) {
+      return res.status(404).json({ message: "Ressource introuvable." });
+    }
+
+    if (resource.visibility !== "PUBLIC") {
+      return res.status(403).json({ message: "Commentaires non accessibles." });
+    }
+
+    const comments = await prisma.comments.findMany({
+      where: { ressource_id: ressourceId },
+      include: {
+        user: {
+          select: { firstname: true, lastname: true, avatar: true },
+        },
+        replies: {
+          include: {
+            user: {
+              select: { firstname: true, lastname: true, avatar: true },
+            },
+          },
+          orderBy: { replie_id: "asc" },
+        },
+      },
+      orderBy: { comment_id: "desc" },
+    });
+
+    return res.json(comments);
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération publique des commentaires :",
+      error
+    );
+    return res.status(500).json({ message: "Erreur serveur" });
   }
 }
 
@@ -176,7 +219,7 @@ async function hideComment(req, res) {
     const userRole = req.user.role;
     const commentId = Number(req.params.id);
 
-    if (userRole !== "ADMIN" && userRole !== "MODERATOR") {
+    if (!canModerate(userRole)) {
       return res.status(403).json({ message: "Accès refusé." });
     }
 
@@ -197,6 +240,7 @@ module.exports = {
   getCommentById,
   deleteComment,
   getCommentsByResource,
+  getPublicCommentsByResource,
   updateComment,
   hideComment,
 };
