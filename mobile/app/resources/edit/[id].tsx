@@ -23,6 +23,8 @@ export default function EditResourceScreen() {
   const [format, setFormat] = useState<ResourceFormat>(resource?.format ?? "Lecture");
   const [relation, setRelation] = useState<ResourceRelation>(resource?.relation ?? "Famille");
   const [access, setAccess] = useState<"public" | "restricted">(resource?.access ?? "public");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   if (!resource) {
     return (
@@ -94,23 +96,39 @@ export default function EditResourceScreen() {
           </View>
 
           <Pressable
-            onPress={() => {
-              updateResource(resource.id, {
-                title,
-                summary,
-                content,
-                category,
-                format,
-                relation,
-                access,
-                tags,
-              });
-              router.replace(`/resources/${resource.id}`);
+            onPress={async () => {
+              try {
+                setLoading(true);
+                setError(null);
+                await updateResource(resource.id, {
+                  title,
+                  summary,
+                  content,
+                  category,
+                  format,
+                  relation,
+                  access,
+                  tags,
+                });
+                router.replace(`/resources/${resource.id}`);
+              } catch (updateError) {
+                setError(
+                  updateError instanceof Error
+                    ? updateError.message
+                    : "Mise à jour impossible."
+                );
+              } finally {
+                setLoading(false);
+              }
             }}
-            style={styles.primaryButton}
+            style={[styles.primaryButton, loading && styles.buttonDisabled]}
           >
-            <Text style={styles.primaryButtonLabel}>Enregistrer</Text>
+            <Text style={styles.primaryButtonLabel}>
+              {loading ? "Enregistrement..." : "Enregistrer"}
+            </Text>
           </Pressable>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
       </ScrollView>
     </ScreenView>
@@ -172,5 +190,13 @@ const styles = StyleSheet.create({
     color: "#fffdf8",
     fontSize: 15,
     fontWeight: "800",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  errorText: {
+    color: "#9b2c2c",
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

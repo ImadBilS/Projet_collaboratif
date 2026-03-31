@@ -133,6 +133,51 @@ async function getCommentsByResource(req, res) {
   }
 }
 
+async function getPublicCommentsByResource(req, res) {
+  try {
+    const ressourceId = Number(req.params.id);
+
+    const resource = await prisma.resources.findUnique({
+      where: { ressource_id: ressourceId },
+      select: { visibility: true },
+    });
+
+    if (!resource) {
+      return res.status(404).json({ message: "Ressource introuvable." });
+    }
+
+    if (resource.visibility !== "PUBLIC") {
+      return res.status(403).json({ message: "Commentaires non accessibles." });
+    }
+
+    const comments = await prisma.comments.findMany({
+      where: { ressource_id: ressourceId },
+      include: {
+        user: {
+          select: { firstname: true, lastname: true, avatar: true },
+        },
+        replies: {
+          include: {
+            user: {
+              select: { firstname: true, lastname: true, avatar: true },
+            },
+          },
+          orderBy: { replie_id: "asc" },
+        },
+      },
+      orderBy: { comment_id: "desc" },
+    });
+
+    return res.json(comments);
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération publique des commentaires :",
+      error
+    );
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
 // Modifier un commentaire
 async function updateComment(req, res) {
   try {
@@ -197,6 +242,7 @@ module.exports = {
   getCommentById,
   deleteComment,
   getCommentsByResource,
+  getPublicCommentsByResource,
   updateComment,
   hideComment,
 };

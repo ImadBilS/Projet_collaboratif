@@ -20,13 +20,16 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [city, setCity] = useState(user?.city ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
+  const [bio, setBio] = useState(user?.bio ?? "");
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setFirstName(user?.firstName ?? "");
     setLastName(user?.lastName ?? "");
     setCity(user?.city ?? "");
     setEmail(user?.email ?? "");
+    setBio(user?.bio ?? "");
   }, [user]);
 
   if (!user) {
@@ -102,7 +105,9 @@ export default function ProfileScreen() {
           </View>
 
           <Pressable
-            onPress={logout}
+            onPress={() => {
+              void logout();
+            }}
             style={[styles.secondaryButton, styles.logoutButton]}
           >
             <Text style={styles.secondaryButtonLabel}>Quitter le mode invité</Text>
@@ -151,11 +156,21 @@ export default function ProfileScreen() {
           <View style={styles.row}>
             <View style={[styles.fieldGroup, styles.flex]}>
               <Text style={styles.label}>Prénom</Text>
-              <TextInput style={styles.input} value={firstName} onChangeText={setFirstName} />
+              <TextInput
+                editable={false}
+                style={[styles.input, styles.inputDisabled]}
+                value={firstName}
+                onChangeText={setFirstName}
+              />
             </View>
             <View style={[styles.fieldGroup, styles.flex]}>
               <Text style={styles.label}>Nom</Text>
-              <TextInput style={styles.input} value={lastName} onChangeText={setLastName} />
+              <TextInput
+                editable={false}
+                style={[styles.input, styles.inputDisabled]}
+                value={lastName}
+                onChangeText={setLastName}
+              />
             </View>
           </View>
 
@@ -167,18 +182,44 @@ export default function ProfileScreen() {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Adresse e-mail</Text>
             <TextInput
+              editable={false}
               autoCapitalize="none"
               keyboardType="email-address"
-              style={styles.input}
+              style={[styles.input, styles.inputDisabled]}
               value={email}
               onChangeText={setEmail}
             />
           </View>
 
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Bio</Text>
+            <TextInput
+              multiline
+              style={[styles.input, styles.textArea]}
+              value={bio}
+              onChangeText={setBio}
+            />
+          </View>
+
+          <Text style={styles.helperText}>
+            L’API mobile met à jour la ville et la bio. Le prénom, le nom et
+            l’e-mail restent en lecture seule avec le back actuel.
+          </Text>
+
           <Pressable
-            onPress={() => {
-              updateProfile({ firstName, lastName, city, email });
-              setMessage("Profil mis à jour localement.");
+            onPress={async () => {
+              try {
+                setMessage("");
+                setError("");
+                await updateProfile({ city, bio });
+                setMessage("Profil synchronisé avec l’API.");
+              } catch (updateError) {
+                setError(
+                  updateError instanceof Error
+                    ? updateError.message
+                    : "Mise à jour impossible."
+                );
+              }
             }}
             style={styles.primaryButton}
           >
@@ -186,10 +227,13 @@ export default function ProfileScreen() {
           </Pressable>
 
           {message ? <Text style={styles.successText}>{message}</Text> : null}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
         <Pressable
-          onPress={logout}
+          onPress={() => {
+            void logout();
+          }}
           style={[styles.secondaryButton, styles.logoutButton]}
         >
           <Text style={styles.secondaryButtonLabel}>Se déconnecter</Text>
@@ -299,6 +343,18 @@ const styles = StyleSheet.create({
     color: "#18211f",
     fontSize: 15,
   },
+  inputDisabled: {
+    opacity: 0.7,
+  },
+  textArea: {
+    minHeight: 110,
+    textAlignVertical: "top",
+  },
+  helperText: {
+    color: "#5a6460",
+    fontSize: 13,
+    lineHeight: 19,
+  },
   primaryButton: {
     backgroundColor: "#17352f",
     borderRadius: 18,
@@ -329,6 +385,14 @@ const styles = StyleSheet.create({
   successText: {
     color: "#215943",
     backgroundColor: "#def2e5",
+    borderRadius: 16,
+    padding: 14,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  errorText: {
+    color: "#9b2c2c",
+    backgroundColor: "#fbe9e9",
     borderRadius: 16,
     padding: 14,
     fontSize: 14,

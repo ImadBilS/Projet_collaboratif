@@ -2,7 +2,15 @@ import { createContext, ReactNode, useContext, useMemo, useState } from "react";
 
 import { useAuth } from "../auth/AuthProvider";
 import { initialActivities } from "./data";
+import {
+  inviteParticipantState,
+  sendMessageState,
+  startActivityState,
+} from "./state";
 import { Activity } from "./types";
+import {
+  canManageActivities,
+} from "./utils";
 
 type ActivitiesContextValue = {
   activities: Activity[];
@@ -23,66 +31,18 @@ export function ActivitiesProvider({ children }: { children: ReactNode }) {
       activities,
       getActivityById: (id) => activities.find((activity) => activity.id === id),
       startActivity: () => {
-        if (!isCitizen || !user) {
-          return "";
-        }
-
-        const nextId = `act-${Date.now()}`;
-        const nextActivity: Activity = {
-          id: nextId,
-          title: "Nouvelle activité citoyenne",
-          description:
-            "Une activité démarrée depuis le mobile pour favoriser un échange relationnel simple.",
-          status: "Prête",
-          participants: [{ id: user.id, name: `${user.firstName} ${user.lastName}` }],
-          messages: [],
-        };
-
-        setActivities((current) => [nextActivity, ...current]);
-        return nextId;
+        const result = startActivityState(activities, user, isCitizen, Date.now());
+        setActivities(result.nextActivities);
+        return result.createdId;
       },
       inviteParticipant: (activityId, name) => {
-        if (!isCitizen || !name.trim()) {
-          return;
-        }
-
         setActivities((current) =>
-          current.map((activity) =>
-            activity.id === activityId
-              ? {
-                  ...activity,
-                  participants: [
-                    ...activity.participants,
-                    { id: `p-${Date.now()}`, name: name.trim() },
-                  ],
-                }
-              : activity
-          )
+          inviteParticipantState(current, activityId, name, user, isCitizen, Date.now())
         );
       },
       sendMessage: (activityId, message) => {
-        if (!isCitizen || !user || !message.trim()) {
-          return;
-        }
-
         setActivities((current) =>
-          current.map((activity) =>
-            activity.id === activityId
-              ? {
-                  ...activity,
-                  status: "En cours",
-                  messages: [
-                    ...activity.messages,
-                    {
-                      id: `m-${Date.now()}`,
-                      author: `${user.firstName} ${user.lastName}`,
-                      message: message.trim(),
-                      createdAt: "À l’instant",
-                    },
-                  ],
-                }
-              : activity
-          )
+          sendMessageState(current, activityId, message, user, isCitizen, Date.now())
         );
       },
     }),

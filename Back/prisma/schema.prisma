@@ -99,6 +99,7 @@ enum ResourceCategory {
 model Resources {
   ressource_id Int            @id @default(autoincrement())
   wording      String
+  content      String?
   visibility   VisibilityEnum
   user_id      Int
 

@@ -1,5 +1,11 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, FileText, LogOut, ShieldCheck } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  LogOut,
+  ShieldCheck,
+} from "lucide-react";
 import { authService } from "../services/authService";
 
 export default function Layout() {
@@ -12,7 +18,7 @@ export default function Layout() {
   const menuItems = [
     { icon: LayoutDashboard, label: "Vue d'ensemble", path: "/dashboard" },
     { icon: Users, label: "Utilisateurs", path: "/users" },
-    { icon: FileText, label: "Annonces", path: "/services" },
+    { icon: FileText, label: "Ressources", path: "/resources" },
   ];
 
   return (

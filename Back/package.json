@@ -8,6 +8,8 @@
     "dev": "nodemon src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "create:admin": "node -r dotenv/config scripts/create-admin.js",
+    "seed:resources": "node scripts/seed-fake-resources.js",
     "test": "node --test"
   },
   "keywords": [],

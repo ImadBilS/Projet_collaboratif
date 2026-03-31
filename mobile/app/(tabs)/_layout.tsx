@@ -7,6 +7,9 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
+        lazy: false,
+        freezeOnBlur: false,
+        tabBarHideOnKeyboard: true,
         headerStyle: { backgroundColor: "#f6f1e8" },
         headerTitleStyle: { color: "#17352f", fontWeight: "800" },
         tabBarStyle: {
@@ -15,6 +18,9 @@ export default function TabsLayout() {
           height: 74,
           paddingTop: 8,
           paddingBottom: 10,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
         },
         tabBarActiveTintColor: "#17352f",
         tabBarInactiveTintColor: "#7a7d78",

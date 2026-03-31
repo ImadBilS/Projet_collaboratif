@@ -6,11 +6,11 @@ async function create(req, res) {
   // (injecté dans req.user par le middleware d’authentification)
   const userId = req.user.user_id;
   // Récupération des données envoyées dans le body de la requête
-  const { wording, visibility } = req.body;
+  const { wording, content, visibility, category } = req.body;
   // Normalisation de la visibilité pour correspondre à l’ENUM Prisma
   // (ex : "public" → "PUBLIC")
   const normalizedVisibility = visibility?.toUpperCase();
-  const normalizedCategory = category?.toUpperCase();
+  const normalizedCategory = normalizeCategories(category);
 
   // Liste des valeurs autorisées pour l’ENUM Visibility
   const allowedVisibilities = ["PUBLIC", "PRIVATE"];
@@ -45,7 +45,10 @@ async function create(req, res) {
   }
 
   // Vérifier la catégorie
-  if (!allowedCategories.includes(normalizedCategory)) {
+  if (
+    normalizedCategory.length === 0 ||
+    normalizedCategory.some((item) => !allowedCategories.includes(item))
+  ) {
     return res.status(400).json({ message: "Catégorie invalide." });
   }
 
@@ -58,6 +61,7 @@ async function create(req, res) {
   const resource = await prisma.resources.create({
     data: {
       wording,
+      content: content?.trim() || null,
       visibility: normalizedVisibility,
       category: normalizedCategory,
       // Association de la ressource à l’utilisateur connecté
@@ -77,7 +81,24 @@ async function create(req, res) {
 //Récupérer toutes les ressources
 async function getRessources(req, res) {
   try {
-    const ressources = await prisma.resources.findMany();
+    const ressources = await prisma.resources.findMany({
+      select: {
+        ressource_id: true,
+        wording: true,
+        content: true,
+        visibility: true,
+        user_id: true,
+        category: true,
+        user: {
+          select: {
+            firstname: true,
+            lastname: true,
+            city: true,
+          },
+        },
+      },
+      orderBy: { ressource_id: "desc" },
+    });
     res.status(200).json(ressources);
   } catch (error) {
     console.error("Erreur lors de la récupération des ressources :", error);
@@ -93,6 +114,22 @@ async function getRessourcesUser(req, res) {
       where: {
         user_id: userId,
       },
+      select: {
+        ressource_id: true,
+        wording: true,
+        content: true,
+        visibility: true,
+        user_id: true,
+        category: true,
+        user: {
+          select: {
+            firstname: true,
+            lastname: true,
+            city: true,
+          },
+        },
+      },
+      orderBy: { ressource_id: "desc" },
     });
     res.status(200).json(ressources);
   } catch (error) {
@@ -110,6 +147,15 @@ async function getRessourceById(req, res) {
     const ressource = await prisma.resources.findUnique({
       where: {
         ressource_id: ressourceId,
+      },
+      include: {
+        user: {
+          select: {
+            firstname: true,
+            lastname: true,
+            city: true,
+          },
+        },
       },
     });
 
@@ -166,6 +212,22 @@ async function getPublicRessources(req, res) {
       where: {
         visibility: "PUBLIC",
       },
+      select: {
+        ressource_id: true,
+        wording: true,
+        content: true,
+        visibility: true,
+        user_id: true,
+        category: true,
+        user: {
+          select: {
+            firstname: true,
+            lastname: true,
+            city: true,
+          },
+        },
+      },
+      orderBy: { ressource_id: "desc" },
     });
     res.status(200).json(ressources);
   } catch (error) {
@@ -236,20 +298,24 @@ async function getNearbyRessourcesForMe(req, res) {
 async function deleteRessource(req, res) {
   try {
     const userId = req.user.user_id;
+    const role = req.user.role;
     const ressourceId = parseInt(req.params.id, 10);
 
-    // Vérifie que l'utilisateur est bien le propriétaire de la ressource
     const existingResource = await prisma.resources.findUnique({
       where: {
         ressource_id: ressourceId,
-        user_id: userId,
       },
     });
 
     if (!existingResource) {
-      return res
-        .status(404)
-        .json({ message: "Ressource non trouvée ou accès refusé." });
+      return res.status(404).json({ message: "Ressource non trouvée." });
+    }
+
+    const canModerate =
+      role === "Administrateur" || role === "Modérateur";
+
+    if (existingResource.user_id !== userId && !canModerate) {
+      return res.status(403).json({ message: "Accès refusé." });
     }
 
     // Supprime la ressource
@@ -270,13 +336,15 @@ async function deleteRessource(req, res) {
 async function updateRessource(req, res) {
   //Récupérer l'id de l'utilisateur connecté et l'id de la ressource à modifier
   const userId = req.user.user_id;
+  const role = req.user.role;
   const ressourceId = Number(req.params.id); //Number pour s'assurer que c'est un entier
 
   //Récupérer les nouvelles données de la ressource depuis le corps de la requête
-  const { wording, visibility, category } = req.body;
+  const { wording, content, visibility, category } = req.body;
 
   const normalizedVisibility = visibility?.toUpperCase();
-  const normalizedCategory = category?.toUpperCase();
+  const normalizedCategory =
+    category === undefined ? undefined : normalizeCategories(category);
 
   const allowedVisibilities = ["PUBLIC", "PRIVATE"];
   const allowedCategories = [
@@ -314,7 +382,9 @@ async function updateRessource(req, res) {
     return res.status(404).json({ message: "Ressource non trouvée." });
   }
 
-  if (ressource.user_id !== userId) {
+  const canModerate = role === "Administrateur" || role === "Modérateur";
+
+  if (ressource.user_id !== userId && !canModerate) {
     return res.status(403).json({ message: "Accès refusé." });
   }
 
@@ -322,7 +392,11 @@ async function updateRessource(req, res) {
     return res.status(400).json({ message: "Visibility invalide." });
   }
 
-  if (category && !allowedCategories.includes(normalizedCategory)) {
+  if (
+    normalizedCategory &&
+    (normalizedCategory.length === 0 ||
+      normalizedCategory.some((item) => !allowedCategories.includes(item)))
+  ) {
     return res.status(400).json({ message: "Catégorie invalide." });
   }
 
@@ -333,6 +407,7 @@ async function updateRessource(req, res) {
     },
     data: {
       wording,
+      content: content === undefined ? undefined : content?.trim() || null,
       visibility: normalizedVisibility,
       category: normalizedCategory,
     },
@@ -364,3 +439,11 @@ module.exports = {
   updateRessource,
   getRessourcesByCategory,
 };
+
+function normalizeCategories(category) {
+  const categories = Array.isArray(category) ? category : [category];
+
+  return categories
+    .filter(Boolean)
+    .map((item) => String(item).trim().toUpperCase());
+}

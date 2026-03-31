@@ -12,7 +12,7 @@ type AccessFilter = "all" | ResourceAccess;
 type SortMode = "latest" | "popular" | "quick";
 
 export default function ResourcesTabScreen() {
-  const { resources } = useResources();
+  const { resources, isSyncing, syncError } = useResources();
   const [query, setQuery] = useState("");
   const [access, setAccess] = useState<AccessFilter>("all");
   const [relation, setRelation] = useState<"all" | ResourceRelation>("all");
@@ -133,6 +133,9 @@ export default function ResourcesTabScreen() {
           {filteredResources.length} ressource{filteredResources.length > 1 ? "s" : ""}
         </Text>
 
+        {isSyncing ? <Text style={styles.infoText}>Synchronisation API en cours...</Text> : null}
+        {syncError ? <Text style={styles.warningText}>Mode dégradé: {syncError}</Text> : null}
+
         <View style={styles.list}>
           {filteredResources.map((resource) => (
             <ResourceCard key={resource.id} resource={resource} />
@@ -190,5 +193,14 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: 14,
+  },
+  infoText: {
+    color: "#596660",
+    fontSize: 13,
+  },
+  warningText: {
+    color: "#9b2c2c",
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { EmptyState } from "../../../components/EmptyState";
@@ -10,10 +10,19 @@ import { useResources } from "../../../features/resources/ResourcesProvider";
 export default function ResourceCommentsScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const { isCitizen } = useAuth();
-  const { getResourceById, addComment, replyToComment } = useResources();
+  const { getResourceById, addComment, replyToComment, refreshComments } = useResources();
   const resource = getResourceById(params.id ?? "");
   const [commentMessage, setCommentMessage] = useState("");
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!params.id) {
+      return;
+    }
+
+    void refreshComments(params.id);
+  }, [params.id]);
 
   if (!resource) {
     return (
@@ -63,9 +72,18 @@ export default function ResourceCommentsScreen() {
               value={commentMessage}
             />
             <Pressable
-              onPress={() => {
-                addComment(resource.id, commentMessage);
-                setCommentMessage("");
+              onPress={async () => {
+                try {
+                  setError(null);
+                  await addComment(resource.id, commentMessage);
+                  setCommentMessage("");
+                } catch (commentError) {
+                  setError(
+                    commentError instanceof Error
+                      ? commentError.message
+                      : "Publication impossible."
+                  );
+                }
               }}
               style={styles.primaryButton}
             >
@@ -76,10 +94,12 @@ export default function ResourceCommentsScreen() {
           <View style={styles.readOnlyNotice}>
             <Text style={styles.readOnlyTitle}>Lecture seule</Text>
             <Text style={styles.readOnlyText}>
-              Les invités peuvent lire les échanges, mais pas publier ni répondre.
+              Les échanges sont chargés depuis l’API. La publication et la réponse restent réservées aux comptes connectés.
             </Text>
           </View>
         )}
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <View style={styles.commentList}>
           {resource.comments.length === 0 ? (
@@ -118,9 +138,25 @@ export default function ResourceCommentsScreen() {
                       value={replyDrafts[comment.id] ?? ""}
                     />
                     <Pressable
-                      onPress={() => {
-                        replyToComment(resource.id, comment.id, replyDrafts[comment.id] ?? "");
-                        setReplyDrafts((current) => ({ ...current, [comment.id]: "" }));
+                      onPress={async () => {
+                        try {
+                          setError(null);
+                          await replyToComment(
+                            resource.id,
+                            comment.id,
+                            replyDrafts[comment.id] ?? ""
+                          );
+                          setReplyDrafts((current) => ({
+                            ...current,
+                            [comment.id]: "",
+                          }));
+                        } catch (replyError) {
+                          setError(
+                            replyError instanceof Error
+                              ? replyError.message
+                              : "Réponse impossible."
+                          );
+                        }
                       }}
                       style={styles.secondaryButton}
                     >
@@ -265,5 +301,10 @@ const styles = StyleSheet.create({
     color: "#6d471f",
     fontSize: 14,
     fontWeight: "800",
+  },
+  errorText: {
+    color: "#9b2c2c",
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

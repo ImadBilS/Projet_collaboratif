@@ -1,4 +1,17 @@
 import { createContext, ReactNode, useContext, useMemo, useState } from "react";
+import {
+  loginRequest,
+  meRequest,
+  registerRequest,
+  updateProfileRequest,
+  logoutRequest,
+  type BackendUser,
+} from "./api";
+import {
+  createGuestUser,
+  isValidSignupPayload,
+  trimProfilePayload as sanitizeProfilePayload,
+} from "./utils";
 
 type Membership = "citizen" | "guest";
 
@@ -10,137 +23,130 @@ export type AuthUser = {
   email: string;
   membership: Membership;
   bio: string;
+  role?: string;
 };
 
 type SignupPayload = {
   firstName: string;
   lastName: string;
+  birth: string;
+  sex: string;
   city: string;
   email: string;
   password: string;
+  streetNumber: string;
+  streetType: string;
+  postalCode: string;
+  country: string;
+  addressComplement?: string;
 };
 
 type AuthContextValue = {
   user: AuthUser | null;
+  accessToken: string | null;
   isCitizen: boolean;
   login: (email: string, password: string) => Promise<void>;
   continueAsGuest: () => void;
   signup: (payload: SignupPayload) => Promise<void>;
-  logout: () => void;
-  updateProfile: (payload: Partial<Omit<AuthUser, "id" | "membership">>) => void;
+  logout: () => Promise<void>;
+  updateProfile: (
+    payload: Partial<Omit<AuthUser, "id" | "membership">>
+  ) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 };
-
-type StoredUser = AuthUser & { password: string };
-
-const seededUsers: StoredUser[] = [
-  {
-    id: "u-1",
-    firstName: "Léa",
-    lastName: "Martin",
-    city: "Lille",
-    email: "lea.martin@example.com",
-    password: "Password123!",
-    membership: "citizen",
-    bio: "J’explore des ressources sur la communication familiale et les activités à faire à plusieurs.",
-  },
-];
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<StoredUser[]>(seededUsers);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      accessToken,
       isCitizen: user?.membership === "citizen",
       login: async (email, password) => {
-        await waitForPrototype();
-        const existingUser = users.find(
-          (candidate) =>
-            candidate.email.toLowerCase() === email.toLowerCase() &&
-            candidate.password === password
-        );
+        const response = await loginRequest(email, password);
+        const token = response.accessToken ?? response.token ?? null;
 
-        if (!existingUser) {
-          throw new Error("Adresse e-mail ou mot de passe incorrect.");
+        if (!token) {
+          throw new Error("Jeton d’accès manquant dans la réponse API.");
         }
 
-        setUser(stripPassword(existingUser));
+        setAccessToken(token);
+        setUser(toAuthUser(response.user));
       },
       continueAsGuest: () => {
-        setUser({
-          id: "guest-session",
-          firstName: "Visiteur",
-          lastName: "Invité",
-          city: "",
-          email: "",
-          membership: "guest",
-          bio: "Navigation en mode invité",
-        });
+        setAccessToken(null);
+        setUser(createGuestUser());
       },
       signup: async (payload) => {
-        await waitForPrototype();
-
-        if (
-          !payload.firstName.trim() ||
-          !payload.lastName.trim() ||
-          !payload.city.trim() ||
-          !payload.email.trim() ||
-          payload.password.length < 8
-        ) {
+        if (!isValidSignupPayload(payload)) {
           throw new Error("Complète tous les champs avec un mot de passe valide.");
         }
 
-        const alreadyExists = users.some(
-          (candidate) =>
-            candidate.email.toLowerCase() === payload.email.trim().toLowerCase()
-        );
+        const response = await registerRequest({
+          firstname: payload.firstName.trim(),
+          lastname: payload.lastName.trim(),
+          birth: payload.birth.trim(),
+          mail: payload.email.trim().toLowerCase(),
+          password: payload.password,
+          role: "Citoyen",
+          sex: payload.sex.trim(),
+          street_number: Number.parseInt(payload.streetNumber, 10),
+          street_type: payload.streetType.trim(),
+          postal_code: Number.parseInt(payload.postalCode, 10),
+          address_complement: payload.addressComplement?.trim() || undefined,
+          city: payload.city.trim(),
+          country: payload.country.trim(),
+        });
 
-        if (alreadyExists) {
-          throw new Error("Un compte existe déjà avec cette adresse e-mail.");
+        const token = response.accessToken ?? response.token ?? null;
+
+        if (!token) {
+          throw new Error("Jeton d’accès manquant dans la réponse API.");
         }
 
-        const newUser: StoredUser = {
-          id: `u-${Date.now()}`,
-          firstName: payload.firstName.trim(),
-          lastName: payload.lastName.trim(),
-          city: payload.city.trim(),
-          email: payload.email.trim(),
-          password: payload.password,
-          membership: "citizen",
-          bio: "Nouveau compte citoyen",
-        };
-
-        setUsers((currentUsers) => [...currentUsers, newUser]);
-        setUser(stripPassword(newUser));
+        setAccessToken(token);
+        setUser(toAuthUser(response.user));
       },
-      logout: () => setUser(null),
-      updateProfile: (payload) => {
-        setUser((currentUser) => {
-          if (!currentUser || currentUser.membership !== "citizen") {
-            return currentUser;
+      logout: async () => {
+        if (accessToken) {
+          try {
+            await logoutRequest(accessToken);
+          } catch {
+            // La session mobile est pilotée par le bearer token; l'échec de logout
+            // ne doit pas empêcher la déconnexion locale.
           }
+        }
 
-          const nextUser = {
-            ...currentUser,
-            ...trimProfilePayload(payload),
-          };
+        setAccessToken(null);
+        setUser(null);
+      },
+      updateProfile: async (payload) => {
+        if (!user || user.membership !== "citizen" || !accessToken) {
+          return;
+        }
 
-          setUsers((currentUsers) =>
-            currentUsers.map((candidate) =>
-              candidate.id === currentUser.id
-                ? { ...candidate, ...trimProfilePayload(payload) }
-                : candidate
-            )
-          );
-
-          return nextUser;
+        const sanitizedPayload = sanitizeProfilePayload(payload);
+        const response = await updateProfileRequest(user.id, accessToken, {
+          city: sanitizedPayload.city,
+          bio: sanitizedPayload.bio,
         });
+
+        setUser(toAuthUser(response.user));
+      },
+      refreshProfile: async () => {
+        if (!accessToken) {
+          return;
+        }
+
+        const response = await meRequest(accessToken);
+        setUser(toAuthUser(response.user));
       },
     }),
-    [user, users]
+    [accessToken, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -156,29 +162,15 @@ export function useAuth() {
   return context;
 }
 
-function stripPassword(user: StoredUser): AuthUser {
+function toAuthUser(user: BackendUser): AuthUser {
   return {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    city: user.city,
-    email: user.email,
-    membership: user.membership,
-    bio: user.bio,
+    id: String(user.user_id),
+    firstName: user.firstname,
+    lastName: user.lastname,
+    city: user.city ?? "",
+    email: user.mail,
+    membership: "citizen",
+    bio: user.bio ?? "",
+    role: user.role,
   };
-}
-
-function trimProfilePayload(
-  payload: Partial<Omit<AuthUser, "id" | "membership">>
-): Partial<Omit<AuthUser, "id" | "membership">> {
-  return {
-    firstName: payload.firstName?.trim(),
-    lastName: payload.lastName?.trim(),
-    city: payload.city?.trim(),
-    email: payload.email?.trim(),
-  };
-}
-
-async function waitForPrototype() {
-  await new Promise((resolve) => setTimeout(resolve, 300));
 }

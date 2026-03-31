@@ -1,5 +1,12 @@
-// L'adresse du Back-End (
-const API_URL = "http://localhost:3000";
+import {
+  clearSession,
+  getStoredToken,
+  getStoredUser,
+  hasStoredSession,
+  isAllowedAdminRole,
+  persistSession,
+} from "./authUtils";
+import { apiRequest } from "./apiClient";
 
 export const authService = {
   register: async (payload: {
@@ -17,56 +24,32 @@ export const authService = {
     city: string;
     country: string;
   }) => {
-    const response = await fetch(`${API_URL}/api/auth/register`, {
+    return apiRequest("/api/auth/register", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
+      body: payload,
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Erreur lors de l'inscription");
-    }
-
-    return response.json();
   },
 
   login: async (mail: string, password: string) => {
     try {
-      // 1. On envoie la requête POST au vrai back-end
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const data = await apiRequest<{
+        token: string;
+        user: {
+          role: string;
+          [key: string]: unknown;
+        };
+      }>("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ mail, password }),
+        body: { mail, password },
       });
-
-      // 2. Si le Back renvoie une erreur (401, 403, 500...)
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur de connexion");
-      }
-
-      // 3. Si c'est bon, on récupère le Token
-      const data = await response.json();
 
       // On vérifie que c'est bien un ADMIN (Sécurité Front)
       // Adapte 'role' selon ce que Matthieu renvoie (ex: "ADMIN" ou "admin")
-      if (
-        data.user.role !== "Administrateur" &&
-        data.user.role !== "Modérateur"
-      ) {
+      if (!isAllowedAdminRole(data.user.role)) {
         throw new Error("Accès refusé. Vous n'êtes pas administrateur.");
       }
 
-      // 4. On sauvegarde dans le navigateur
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      persistSession(data.token, data.user, localStorage);
 
       return data;
     } catch (error: any) {
@@ -76,12 +59,15 @@ export const authService = {
   },
 
   logout: () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearSession(localStorage);
     window.location.href = "/login";
   },
 
   isAuthenticated: () => {
-    return !!localStorage.getItem("token");
+    return hasStoredSession(localStorage);
   },
+
+  getToken: () => getStoredToken(localStorage),
+
+  getCurrentUser: () => getStoredUser(localStorage),
 };

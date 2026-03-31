@@ -20,6 +20,8 @@ export default function CreateResourceScreen() {
   const [format, setFormat] = useState<ResourceFormat>("Lecture");
   const [relation, setRelation] = useState<ResourceRelation>("Famille");
   const [access, setAccess] = useState<"public" | "restricted">("public");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   if (!isCitizen || !user) {
     return (
@@ -120,23 +122,39 @@ export default function CreateResourceScreen() {
           </View>
 
           <Pressable
-            onPress={() => {
-              const id = createResource({
-                title,
-                summary,
-                content,
-                category,
-                format,
-                relation,
-                access,
-                tags,
-              });
-              router.replace(`/resources/${id}`);
+            onPress={async () => {
+              try {
+                setLoading(true);
+                setError(null);
+                const id = await createResource({
+                  title,
+                  summary,
+                  content,
+                  category,
+                  format,
+                  relation,
+                  access,
+                  tags,
+                });
+                router.replace(`/resources/${id}`);
+              } catch (creationError) {
+                setError(
+                  creationError instanceof Error
+                    ? creationError.message
+                    : "Création impossible."
+                );
+              } finally {
+                setLoading(false);
+              }
             }}
-            style={styles.primaryButton}
+            style={[styles.primaryButton, loading && styles.buttonDisabled]}
           >
-            <Text style={styles.primaryButtonLabel}>Publier la ressource</Text>
+            <Text style={styles.primaryButtonLabel}>
+              {loading ? "Publication..." : "Publier la ressource"}
+            </Text>
           </Pressable>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
       </ScrollView>
     </ScreenView>
@@ -215,5 +233,13 @@ const styles = StyleSheet.create({
     color: "#fffdf8",
     fontSize: 15,
     fontWeight: "800",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  errorText: {
+    color: "#9b2c2c",
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

@@ -10,7 +10,14 @@ export default function SignupScreen() {
   const { signup } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [birth, setBirth] = useState("");
+  const [sex, setSex] = useState("");
   const [city, setCity] = useState("");
+  const [streetNumber, setStreetNumber] = useState("");
+  const [streetType, setStreetType] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("France");
+  const [addressComplement, setAddressComplement] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +27,20 @@ export default function SignupScreen() {
     try {
       setLoading(true);
       setError(null);
-      await signup({ firstName, lastName, city, email, password });
+      await signup({
+        firstName,
+        lastName,
+        birth,
+        sex,
+        city,
+        streetNumber,
+        streetType,
+        postalCode,
+        country,
+        addressComplement,
+        email,
+        password,
+      });
       router.replace("/(tabs)/profile");
     } catch (signupError) {
       setError(
@@ -65,6 +85,28 @@ export default function SignupScreen() {
       </View>
 
       <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Date de naissance</Text>
+        <TextInput
+          onChangeText={setBirth}
+          placeholder="2000-05-24"
+          placeholderTextColor="#8b918c"
+          style={styles.input}
+          value={birth}
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Sexe</Text>
+        <TextInput
+          onChangeText={setSex}
+          placeholder="Femme, Homme, Autre..."
+          placeholderTextColor="#8b918c"
+          style={styles.input}
+          value={sex}
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
         <Text style={styles.label}>Ville</Text>
         <TextInput
           onChangeText={setCity}
@@ -72,6 +114,63 @@ export default function SignupScreen() {
           placeholderTextColor="#8b918c"
           style={styles.input}
           value={city}
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Numéro de rue</Text>
+        <TextInput
+          keyboardType="number-pad"
+          onChangeText={setStreetNumber}
+          placeholder="12"
+          placeholderTextColor="#8b918c"
+          style={styles.input}
+          value={streetNumber}
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Type de voie</Text>
+        <TextInput
+          onChangeText={setStreetType}
+          placeholder="rue, avenue, place..."
+          placeholderTextColor="#8b918c"
+          style={styles.input}
+          value={streetType}
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Code postal</Text>
+        <TextInput
+          keyboardType="number-pad"
+          onChangeText={setPostalCode}
+          placeholder="59000"
+          placeholderTextColor="#8b918c"
+          style={styles.input}
+          value={postalCode}
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Complément d’adresse</Text>
+        <TextInput
+          onChangeText={setAddressComplement}
+          placeholder="Bâtiment, étage..."
+          placeholderTextColor="#8b918c"
+          style={styles.input}
+          value={addressComplement}
+        />
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>Pays</Text>
+        <TextInput
+          onChangeText={setCountry}
+          placeholder="France"
+          placeholderTextColor="#8b918c"
+          style={styles.input}
+          value={country}
         />
       </View>
 

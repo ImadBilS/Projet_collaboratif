@@ -8,8 +8,8 @@ import { useAuth } from "../../features/auth/AuthProvider";
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [email, setEmail] = useState("lea.martin@example.com");
-  const [password, setPassword] = useState("Password123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
