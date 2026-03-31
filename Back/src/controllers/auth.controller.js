@@ -1,5 +1,5 @@
 // Contrôleurs d'authentification: inscription, connexion, profil.
-const crypto = require("crypto");
+const crypto = require("node:crypto");
 const { prisma } = require("../db/prisma");
 const { hashPassword, comparePassword } = require("../utils/password");
 const {
@@ -30,6 +30,57 @@ function sanitizeUser(user) {
   return safeUser;
 }
 
+// Valide les champs requis pour l'inscription
+function validateRegistrationFields(isAdmin, body) {
+  if (isAdmin) {
+    if (
+      !body.firstname ||
+      !body.lastname ||
+      !body.mail ||
+      !body.password ||
+      !body.role
+    ) {
+      return { valid: false, message: "Champs obligatoires manquants (admin)" };
+    }
+  } else if (
+    !body.firstname ||
+    !body.lastname ||
+    !body.birth ||
+    !body.mail ||
+    !body.password ||
+    !body.sex ||
+    body.street_number === undefined ||
+    !body.street_type ||
+    body.postal_code === undefined ||
+    !body.city ||
+    !body.country
+  ) {
+    return { valid: false, message: "Champs obligatoires manquants" };
+  }
+
+  if (!ALLOWED_ROLES.includes(body.role || "Citoyen")) {
+    return {
+      valid: false,
+      message: "Rôle invalide (Citoyen, Modérateur, Administrateur)",
+    };
+  }
+
+  return { valid: true };
+}
+
+// Prépare les données utilisateur finales
+function prepareUserData(isAdmin, body) {
+  return {
+    birth: isAdmin ? new Date("2000-01-01") : new Date(body.birth),
+    sex: isAdmin ? "O" : body.sex,
+    street_number: isAdmin ? 0 : toInteger(body.street_number),
+    street_type: isAdmin ? "N/A" : body.street_type,
+    postal_code: isAdmin ? 0 : toInteger(body.postal_code),
+    city: isAdmin ? "N/A" : body.city,
+    country: isAdmin ? "N/A" : body.country,
+  };
+}
+
 const REFRESH_COOKIE_NAME = process.env.REFRESH_COOKIE_NAME ?? "refreshToken";
 
 function parseDurationToMs(value) {
@@ -42,7 +93,7 @@ function parseDurationToMs(value) {
   }
 
   const trimmed = value.trim();
-  const match = trimmed.match(/^(\d+)\s*([smhd])?$/i);
+  const match = /^(\d+)\s*([smhd])?$/i.exec(trimmed);
 
   if (!match) {
     return 7 * 24 * 60 * 60 * 1000;
@@ -104,7 +155,7 @@ async function createSessionForUser(user) {
   });
 
   const refreshExpiresAt = new Date(
-    Date.now() + parseDurationToMs(REFRESH_TOKEN_EXPIRES_IN)
+    Date.now() + parseDurationToMs(REFRESH_TOKEN_EXPIRES_IN),
   );
 
   await prisma.user.update({
@@ -120,64 +171,45 @@ async function createSessionForUser(user) {
 
 // Inscription d'un utilisateur.
 async function register(req, res) {
-  // Récupération des champs envoyés par le client.
+  const authUser = req.user; // On récupère l'utilisateur connecté
+
   const {
     firstname,
     lastname,
-    birth,
     mail,
     password,
-    role = "Citoyen", // Par défaut, le rôle est "Citoyen" si non spécifié.
-    sex,
-    street_number,
-    street_type,
-    postal_code,
+    role = "Citoyen",
     address_complement,
-    city,
-    country,
   } = req.body;
 
-  // Vérifie la présence des champs obligatoires.
-  if (
-    !firstname ||
-    !lastname ||
-    !birth ||
-    !mail ||
-    !password ||
-    !sex ||
-    street_number === undefined ||
-    !street_type ||
-    postal_code === undefined ||
-    !city ||
-    !country
-  ) {
-    return res.status(400).json({ message: "Champs obligatoires manquants" });
+  const isAdmin = authUser?.role === "Administrateur";
+
+  // Validation des champs
+  const validation = validateRegistrationFields(isAdmin, req.body);
+  if (!validation.valid) {
+    return res.status(400).json({ message: validation.message });
   }
 
-  // Contrôle du rôle.
-  if (!ALLOWED_ROLES.includes(role)) {
-    return res
-      .status(400)
-      .json({ message: "Rôle invalide (Citoyen, Modérateur, Administrateur)" });
-  }
+  // Prépare les données finales
+  const userData = prepareUserData(isAdmin, req.body);
 
-  // Contrôle de la date.
-  if (!isValidDate(birth)) {
-    return res.status(400).json({ message: "Date de naissance invalide" });
-  }
+  // Validation supplémentaire pour les non-admins
+  if (!isAdmin) {
+    // Vérifier la date
+    if (!isValidDate(req.body.birth)) {
+      return res.status(400).json({ message: "Date de naissance invalide" });
+    }
 
-  // Conversion des champs numériques.
-  const streetNumber = toInteger(street_number);
-  const postalCode = toInteger(postal_code);
-
-  if (streetNumber === null || postalCode === null) {
-    return res.status(400).json({
-      message: "numéro de rue et code postal doivent être des nombres",
-    });
+    // Vérifier les nombres
+    if (userData.street_number === null || userData.postal_code === null) {
+      return res.status(400).json({
+        message: "numéro de rue et code postal doivent être des nombres",
+      });
+    }
   }
 
   try {
-    // Vérifie si l'email existe déjà.
+    // Vérifie si l'email existe déjà
     const existingUser = await prisma.user.findUnique({
       where: { mail },
     });
@@ -186,39 +218,50 @@ async function register(req, res) {
       return res.status(409).json({ message: "Email déjà utilisé" });
     }
 
-    // Hash du mot de passe avant stockage.
+    // Hash du mot de passe
     const hashedPassword = await hashPassword(password);
 
-    // Création de l'utilisateur en base.
+    // Création de l'utilisateur
     const createdUser = await prisma.user.create({
       data: {
         firstname,
         lastname,
-        birth: new Date(birth),
+        birth: userData.birth,
         mail,
         password: hashedPassword,
         role,
-        sex,
-        street_number: streetNumber,
-        street_type,
-        postal_code: postalCode,
+        sex: userData.sex,
+        street_number: userData.street_number,
+        street_type: userData.street_type,
+        postal_code: userData.postal_code,
         address_complement: address_complement || null,
-        city,
-        country,
+        city: userData.city,
+        country: userData.country,
       },
     });
 
-    const { accessToken, refreshToken } = await createSessionForUser(createdUser);
+    // IMPORTANT : si c'est un admin → on NE crée PAS de session
+    if (isAdmin) {
+      return res.status(201).json({
+        message: "Utilisateur créé par un administrateur",
+        user: sanitizeUser(createdUser),
+      });
+    }
+
+    // Sinon → comportement normal (création de session)
+    const { accessToken, refreshToken } =
+      await createSessionForUser(createdUser);
     res.cookie(REFRESH_COOKIE_NAME, refreshToken, getRefreshCookieOptions());
 
-    // Renvoie le token et l'utilisateur sans le mot de passe.
     return res.status(201).json({
       token: accessToken,
       accessToken,
       user: sanitizeUser(createdUser),
     });
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res
+      .status(500)
+      .json({ message: "Erreur serveur", error: error.message });
   }
 }
 
@@ -258,7 +301,9 @@ async function login(req, res) {
       user: sanitizeUser(user),
     });
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res
+      .status(500)
+      .json({ message: "Erreur serveur", error: error.message });
   }
 }
 
@@ -276,7 +321,7 @@ async function refresh(req, res) {
       where: { user_id: decoded.userId },
     });
 
-    if (!user || !user.refresh_token_hash || !user.refresh_token_expires_at) {
+    if (!user?.refresh_token_hash || !user?.refresh_token_expires_at) {
       return res.status(401).json({ message: "Refresh token invalide" });
     }
 
@@ -294,7 +339,7 @@ async function refresh(req, res) {
     res.cookie(
       REFRESH_COOKIE_NAME,
       nextRefreshToken,
-      getRefreshCookieOptions()
+      getRefreshCookieOptions(),
     );
 
     return res.status(200).json({
@@ -302,7 +347,9 @@ async function refresh(req, res) {
       accessToken,
     });
   } catch (error) {
-    return res.status(401).json({ message: "Refresh token invalide" });
+    return res
+      .status(401)
+      .json({ message: "Refresh token invalide", error: error.message });
   }
 }
 
@@ -322,6 +369,7 @@ async function logout(req, res) {
       });
     } catch (error) {
       // Si le token est invalide, on continue quand même le logout côté client.
+      console.error("Error invalidating refresh token:", error);
     }
   }
 
@@ -350,7 +398,9 @@ async function me(req, res) {
     // Renvoie l'utilisateur sans le mot de passe.
     return res.status(200).json({ user: sanitizeUser(user) });
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res
+      .status(500)
+      .json({ message: "Erreur serveur", error: error.message });
   }
 }
 

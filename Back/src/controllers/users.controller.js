@@ -29,7 +29,7 @@ async function buildAnonymizedUserData(userId, nowMs = Date.now()) {
   const anonymizationToken = `${userId}-${nowMs}`;
   const anonymizedEmail = `deleted+${anonymizationToken}@example.invalid`;
   const anonymizedPassword = await hashPassword(
-    `deleted-account-${anonymizationToken}`
+    `deleted-account-${anonymizationToken}`,
   );
   const textMask = `ANONYMIZED_${userId}`;
 
@@ -111,13 +111,14 @@ async function createUserProfile(req, res) {
     });
     return res.status(200).json({ user: sanitizeUser(updatedUser) });
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res.status(500).json({ message: "Erreur serveur", error });
   }
 }
 
 // READ: recuperer un utilisateur par id
 async function getUserById(req, res) {
   const userId = Number.parseInt(req.params.user_id, 10);
+
   if (Number.isNaN(userId)) {
     return res.status(400).json({ message: "user_id invalide" });
   }
@@ -152,7 +153,7 @@ async function getUserById(req, res) {
     }
     return res.status(200).json({ user });
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res.status(500).json({ message: "Erreur serveur", error });
   }
 }
 
@@ -192,7 +193,7 @@ async function updateUserProfile(req, res) {
 
     return res.status(200).json({ user: sanitizeUser(updatedUser) });
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 }
 
@@ -223,7 +224,7 @@ async function deleteUserProfile(req, res) {
       !anonymizedUserData.password
     ) {
       throw new Error(
-        "Payload d'anonymisation incomplet pour les champs obligatoires"
+        "Payload d'anonymisation incomplet pour les champs obligatoires",
       );
     }
 
@@ -257,7 +258,7 @@ async function deleteUserProfile(req, res) {
 
     return res.status(200).json({ user: sanitizeUser(result.updatedUser) });
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 }
 
@@ -297,16 +298,127 @@ async function updateUserRole(req, res) {
 
     return res.status(200).json({ user: sanitizeUser(updatedUser) });
   } catch (error) {
-    return res.status(500).json({ message: "Erreur serveur" });
+    return res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 }
 
+async function getAllUsers(req, res) {
+  if (req.user.role !== "Administrateur") {
+    return res.status(403).json({ message: "Accès interdit" });
+  }
+
+  try {
+    const users = await prisma.user.findMany({
+      where: { is_anonymized: false },
+      select: {
+        user_id: true,
+        firstname: true,
+        lastname: true,
+        mail: true,
+        role: true,
+        avatar: true,
+        city: true,
+        bio: true,
+      },
+    });
+
+    return res.status(200).json({ users });
+  } catch (error) {
+    return res.status(500).json({ message: "Erreur serveur", error: error.message });
+  }
+}
+
+async function updateUserAccount(req, res) {
+  const userId = Number(req.params.userId);
+
+  if (Number.isNaN(userId)) {
+    return res.status(400).json({ message: "userId invalide" });
+  }
+
+  // L'utilisateur ne peut modifier que son propre compte
+  if (req.user.user_id !== userId) {
+    return res.status(403).json({ message: "Accès interdit" });
+  }
+
+  const {
+    firstname,
+    lastname,
+    mail,
+    oldPassword,
+    newPassword,
+    sex,
+    birth,
+    street_number,
+    street_type,
+    postal_code,
+    address_complement,
+    city,
+    country,
+  } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { user_id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur introuvable" });
+    }
+
+    // Si changement de mot de passe → vérifier l'ancien
+    let hashedPassword = user.password;
+    if (newPassword) {
+      if (!oldPassword) {
+        return res.status(400).json({ message: "Ancien mot de passe requis" });
+      }
+
+      const match = await comparePassword(oldPassword, user.password);
+      if (!match) {
+        return res.status(401).json({ message: "Ancien mot de passe incorrect" });
+      }
+
+      hashedPassword = await hashPassword(newPassword);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { user_id: userId },
+      data: {
+        firstname,
+        lastname,
+        mail,
+        password: hashedPassword,
+        sex,
+        birth: birth ? new Date(birth) : undefined,
+        street_number,
+        street_type,
+        postal_code,
+        address_complement,
+        city,
+        country,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Compte mis à jour",
+      user: {
+        ...updatedUser,
+        password: undefined,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Erreur serveur", error: error.message });
+  }
+}
+
+module.exports = { updateUserAccount };
 
 module.exports = {
+  getAllUsers,
   buildAnonymizedUserData,
   createUserProfile,
   getUserById,
   updateUserProfile,
   deleteUserProfile,
   updateUserRole,
+  updateUserAccount,
 };

@@ -19,30 +19,30 @@ async function getStats(req, res) {
 
     // Total ressources
     const totalResources = await prisma.resources.count({
-      where:  dateFilter ? { created_at: dateFilter } : undefined,
+      where: dateFilter ? { created_at: dateFilter } : undefined,
     });
 
     // Total vues (somme de view_number)
     const totalViews = await prisma.views.aggregate({
       _sum: { view_number: true },
-      where:  dateFilter ? { created_at: dateFilter } : undefined,
+      where: dateFilter ? { created_at: dateFilter } : undefined,
     });
 
     // Total commentaires
     const totalComments = await prisma.comments.count({
-      where:  dateFilter ? { created_at: dateFilter } : undefined,
+      where: dateFilter ? { created_at: dateFilter } : undefined,
     });
 
     // Total réactions
     const totalReactions = await prisma.react.count({
-      where:  dateFilter ? { created_at: dateFilter } : undefined,
+      where: dateFilter ? { created_at: dateFilter } : undefined,
     });
 
     // Catégories les plus populaires
-    const popularCategories = await prisma.resources.groupBy({
+    const popularCategories = await prisma.resourceCategory.groupBy({
       by: ["category"],
       _count: { category: true },
-      where:  dateFilter ? { created_at: dateFilter } : undefined,
+      where: dateFilter ? { created_at: dateFilter } : undefined,
       orderBy: {
         _count: {
           category: "desc",
@@ -55,7 +55,7 @@ async function getStats(req, res) {
     const mostViewedResources = await prisma.views.groupBy({
       by: ["ressource_id"],
       _sum: { view_number: true },
-      where:  dateFilter ? { created_at: dateFilter } : undefined,
+      where: dateFilter ? { created_at: dateFilter } : undefined,
       orderBy: {
         _sum: { view_number: "desc" },
       },
@@ -83,7 +83,7 @@ async function getStats(req, res) {
         ressource_id: item.ressource_id,
         views: item._sum.view_number,
         wording: resource?.wording || "Ressource inconnue",
-        category: resource?.category || null,
+        category: resource?.category.map((c) => c.category) || [],
       };
     });
 
@@ -91,7 +91,7 @@ async function getStats(req, res) {
     const mostCommentedResources = await prisma.comments.groupBy({
       by: ["ressource_id"],
       _count: { ressource_id: true },
-      where:  dateFilter ? { created_at: dateFilter } : undefined,
+      where: dateFilter ? { created_at: dateFilter } : undefined,
       orderBy: {
         _count: { ressource_id: "desc" },
       },
@@ -102,7 +102,7 @@ async function getStats(req, res) {
     const mostLikedResources = await prisma.react.groupBy({
       by: ["ressource_id"],
       _count: { ressource_id: true },
-      where:  dateFilter ? { created_at: dateFilter } : undefined,
+      where: dateFilter ? { created_at: dateFilter } : undefined,
       orderBy: {
         _count: { ressource_id: "desc" },
       },
@@ -112,6 +112,9 @@ async function getStats(req, res) {
     // Utilisateurs les plus actifs
     // basé sur : ressources créées + commentaires + réactions
     const activeUsers = await prisma.user.findMany({
+      where: {
+        is_anonymized: false,
+      },
       select: {
         user_id: true,
         firstname: true,
@@ -148,21 +151,27 @@ async function getStats(req, res) {
     // on combine views + ressources
     // Prisma ne permet pas de sommer directement une relation dans un groupBy.
     // Donc on fait en deux étapes :
-    const categoryViewsRaw = await prisma.$queryRawUnsafe(`
-        SELECT r.category, SUM(v.view_number) AS totalViews
-        FROM "Resources" r
+    const categoryViewsRaw = await prisma.$queryRawUnsafe(
+      `
+        SELECT rc.category, SUM(v.view_number) AS totalViews
+        FROM "ResourceCategory" rc
+        LEFT JOIN "Resources" r ON rc.resource_id = r.ressource_id
         LEFT JOIN "Views" v ON r.ressource_id = v.ressource_id
-        WHERE 1=1 
+        WHERE 1=1
         ${whereSQL}
-        GROUP BY r.category
+        GROUP BY rc.category
         ORDER BY totalViews DESC
-        LIMIT 5;  
-        `, ...params);
+        LIMIT 5;
+ 
+        `,
+      ...params,
+    );
     const categoryViews = fixBigInt(categoryViewsRaw);
 
     // --- STATS GÉOGRAPHIQUES ---
 
-    const resourcesByDepartmentRaw = await prisma.$queryRawUnsafe(`
+    const resourcesByDepartmentRaw = await prisma.$queryRawUnsafe(
+      `
       SELECT 
         SUBSTRING(u.postal_code::text, 1, 2) AS department,
         COUNT(r.ressource_id) AS total
@@ -173,10 +182,13 @@ async function getStats(req, res) {
         GROUP BY department
         ORDER BY total DESC
         LIMIT 5;
-    `, ...params);
+    `,
+      ...params,
+    );
     const resourcesByDepartment = fixBigInt(resourcesByDepartmentRaw);
 
-    const resourcesByCityRaw = await prisma.$queryRawUnsafe(`
+    const resourcesByCityRaw = await prisma.$queryRawUnsafe(
+      `
             SELECT 
                 u.city AS city,
                 COUNT(r.ressource_id) AS total
@@ -184,13 +196,16 @@ async function getStats(req, res) {
             JOIN "User" u ON r.user_id = u.user_id
            WHERE 1=1 
             ${whereSQL}
-            GROUP BY city
+            GROUP BY u.city
             ORDER BY total DESC
             LIMIT 5;
-            `, ...params);
+            `,
+      ...params,
+    );
     const resourcesByCity = fixBigInt(resourcesByCityRaw);
 
-    const viewsByDepartmentRaw = await prisma.$queryRawUnsafe(`
+    const viewsByDepartmentRaw = await prisma.$queryRawUnsafe(
+      `
       SELECT 
             SUBSTRING(u.postal_code::text, 1, 2) AS department,
             SUM(v.view_number) AS totalViews
@@ -202,7 +217,9 @@ async function getStats(req, res) {
         GROUP BY department
         ORDER BY totalViews DESC
         LIMIT 5;
-        `, ...params);
+        `,
+      ...params,
+    );
     const viewsByDepartment = fixBigInt(viewsByDepartmentRaw);
 
     res.json({
