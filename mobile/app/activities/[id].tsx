@@ -48,8 +48,8 @@ export default function ActivityDetailScreen() {
                 placeholderTextColor="#8a908b"
               />
               <Pressable
-                onPress={() => {
-                  inviteParticipant(activity.id, participantName);
+                onPress={async () => {
+                  await inviteParticipant(activity.id, participantName);
                   setParticipantName("");
                 }}
                 style={styles.primaryButton}

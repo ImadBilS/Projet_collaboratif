@@ -55,34 +55,34 @@ export default function ResourceDetailScreen() {
         <View style={styles.buttonColumn}>
           <AppButton
             label={isFavorite(resource.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
-            onPress={() => {
+            onPress={async () => {
               if (!isCitizen) {
                 return;
               }
 
-              toggleFavorite(resource.id);
+              await toggleFavorite(resource.id);
             }}
             variant={isFavorite(resource.id) ? "secondary" : "primary"}
           />
           <AppButton
             label={isSavedForLater(resource.id) ? "Annuler mise de côté" : "Mettre de côté"}
-            onPress={() => {
+            onPress={async () => {
               if (!isCitizen) {
                 return;
               }
 
-              toggleSavedForLater(resource.id);
+              await toggleSavedForLater(resource.id);
             }}
             variant="secondary"
           />
           <AppButton
             label={isCompleted(resource.id) ? "Marquer non exploitée" : "Marquer exploitée"}
-            onPress={() => {
+            onPress={async () => {
               if (!isCitizen) {
                 return;
               }
 
-              toggleCompleted(resource.id);
+              await toggleCompleted(resource.id);
             }}
             variant="secondary"
           />
@@ -125,7 +125,7 @@ export default function ResourceDetailScreen() {
           <Link href={`/resources/${resource.id}/comments`} asChild>
             <Pressable style={styles.inlineButtonAlt}>
               <Text style={styles.inlineButtonAltLabel}>
-                Commentaires ({resource.comments.length})
+                Commentaires ({resource.commentCount})
               </Text>
             </Pressable>
           </Link>

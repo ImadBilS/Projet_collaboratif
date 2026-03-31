@@ -1,4 +1,5 @@
 const { prisma } = require("../db/prisma");
+const { canModerate } = require("../utils/roles");
 
 // Ajouter un commentaire
 async function addComment(req, res) {
@@ -67,7 +68,7 @@ async function getCommentById(req, res) {
 async function deleteComment(req, res) {
   try {
     const userId = req.user.user_id;
-    const userRole = req.user.role; // "ADMIN", "MODERATOR", "USER"
+    const userRole = req.user.role;
     const commentId = Number(req.params.id);
 
     // Vérifier que le commentaire existe
@@ -84,10 +85,7 @@ async function deleteComment(req, res) {
     // - admin
     // - modérateur
     const isOwner = comment.user_id === userId;
-    const isAdmin = userRole === "ADMIN";
-    const isModerator = userRole === "MODERATOR";
-
-    if (!isOwner && !isAdmin && !isModerator) {
+    if (!isOwner && !canModerate(userRole)) {
       return res.status(403).json({ message: "Accès refusé." });
     }
 
@@ -221,7 +219,7 @@ async function hideComment(req, res) {
     const userRole = req.user.role;
     const commentId = Number(req.params.id);
 
-    if (userRole !== "ADMIN" && userRole !== "MODERATOR") {
+    if (!canModerate(userRole)) {
       return res.status(403).json({ message: "Accès refusé." });
     }
 

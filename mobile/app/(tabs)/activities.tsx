@@ -23,12 +23,12 @@ export default function ActivitiesTabScreen() {
         </View>
 
         <Pressable
-          onPress={() => {
+          onPress={async () => {
             if (!isCitizen) {
               return;
             }
 
-            const nextId = startActivity();
+            const nextId = await startActivity();
 
             if (nextId) {
               router.push(`/activities/${nextId}`);

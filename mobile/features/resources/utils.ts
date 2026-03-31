@@ -61,6 +61,7 @@ export function buildResourceFromDraft(
     readingTime: Math.max(3, Math.ceil(draft.content.split(" ").length / 130)),
     likes: 0,
     tags: splitTags(draft.tags),
+    commentCount: 0,
     ownerId: user.id,
     comments: [],
   };
@@ -72,16 +73,18 @@ export function mapBackendResourceToMobileResource(
   const categoryToken = Array.isArray(resource.category)
     ? resource.category[0]
     : resource.category;
-  const category = mapBackendCategoryToMobileCategory(categoryToken);
+  const category = mapBackendCategoryToMobileCategory(categoryToken, resource.format);
   const access = resource.visibility === "PUBLIC" ? "public" : "restricted";
-  const format = category === "Activité / Jeu" ? "Activité" : "Lecture";
-  const relation = inferRelationFromCategory(categoryToken);
+  const format = mapBackendFormatToMobileFormat(resource.format, category);
+  const relation = mapBackendRelationToMobileRelation(resource.relation, categoryToken);
   const publishedTimestamp = Date.now();
+  const summary = resource.summary?.trim() || buildSummary(resource, category, access);
+  const tags = Array.isArray(resource.tags) ? resource.tags.filter(Boolean) : [];
 
   return {
     id: String(resource.ressource_id),
     title: resource.wording,
-    summary: buildSummary(resource, category, access),
+    summary,
     content: splitApiContent(resource.content),
     category,
     format,
@@ -93,9 +96,11 @@ export function mapBackendResourceToMobileResource(
     publishedAt: "Synchronisé depuis l’API",
     publishedTimestamp,
     readingTime: Math.max(2, Math.ceil(resource.wording.split(/\s+/).length / 40)),
-    likes: 0,
-    tags: [],
+    likes: resource._count?.reactions ?? 0,
+    tags,
+    commentCount: resource._count?.comments ?? 0,
     ownerId: String(resource.user_id),
+    featured: Boolean(resource.featured),
     comments: [],
   };
 }
@@ -114,8 +119,15 @@ export function mapMobileDraftToApiPayload(draft: ResourceDraft) {
   return {
     wording: draft.title.trim(),
     content: draft.content.trim() || draft.summary.trim(),
-    visibility: draft.access === "public" ? "PUBLIC" : "PRIVATE",
+    summary: draft.summary.trim(),
+    visibility: (draft.access === "public" ? "PUBLIC" : "PRIVATE") as
+      | "PUBLIC"
+      | "PRIVATE",
     category: [mapMobileCategoryToBackendCategory(draft.category)],
+    format: draft.format,
+    relation: draft.relation,
+    tags: splitTags(draft.tags),
+    featured: false,
   };
 }
 
@@ -180,23 +192,14 @@ function splitApiContent(content?: string | null) {
   ];
 }
 
-function inferRelationFromCategory(category?: string): Resource["relation"] {
-  switch (category) {
-    case "CHILDCARE":
-    case "ELDERLY_HELP":
-      return "Famille";
-    case "SOCIAL_SUPPORT":
-    case "COMMUNITY":
-    case "EVENTS":
-      return "Amitié";
-    case "JOB_HELP":
-      return "Travail";
-    default:
-      return "Famille";
+function mapBackendCategoryToMobileCategory(
+  category?: string,
+  format?: string | null
+): Resource["category"] {
+  if (format === "Activité" || format === "Atelier") {
+    return "Activité / Jeu";
   }
-}
 
-function mapBackendCategoryToMobileCategory(category?: string): Resource["category"] {
   switch (category) {
     case "EVENTS":
     case "COMMUNITY":
@@ -212,6 +215,46 @@ function mapBackendCategoryToMobileCategory(category?: string): Resource["catego
       return "Fiche pratique";
     default:
       return "Article";
+  }
+}
+
+function mapBackendFormatToMobileFormat(
+  format: string | null | undefined,
+  category: Resource["category"]
+): Resource["format"] {
+  if (format === "Lecture" || format === "Audio" || format === "Atelier" || format === "Activité") {
+    return format;
+  }
+
+  return category === "Activité / Jeu" ? "Activité" : "Lecture";
+}
+
+function mapBackendRelationToMobileRelation(
+  relation: string | null | undefined,
+  category?: string
+): Resource["relation"] {
+  if (
+    relation === "Famille" ||
+    relation === "Couple" ||
+    relation === "Amitié" ||
+    relation === "Travail" ||
+    relation === "Voisinage"
+  ) {
+    return relation;
+  }
+
+  switch (category) {
+    case "CHILDCARE":
+    case "ELDERLY_HELP":
+      return "Famille";
+    case "SOCIAL_SUPPORT":
+    case "COMMUNITY":
+    case "EVENTS":
+      return "Amitié";
+    case "JOB_HELP":
+      return "Travail";
+    default:
+      return "Famille";
   }
 }
 

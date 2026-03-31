@@ -1,4 +1,5 @@
 const { prisma } = require("../db/prisma");
+const { canModerate } = require("../utils/roles");
 
 // Signaler un commentaire
 async function reportComment(req, res) {
@@ -58,7 +59,7 @@ async function reportReply(req, res) {
 async function getAllReports(req, res) {
   const role = req.user.role;
 
-  if (role !== "ADMIN" && role !== "MODERATOR") {
+  if (!canModerate(role)) {
     return res.status(403).json({ message: "Accès refusé." });
   }
 
@@ -92,7 +93,7 @@ async function resolveReport(req, res) {
     const role = req.user.role;
     const reportId = Number(req.params.id);
 
-    if (role !== "ADMIN" && role !== "MODERATOR") {
+    if (!canModerate(role)) {
       return res.status(403).json({ message: "Accès refusé." });
     }
 

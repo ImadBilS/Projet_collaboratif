@@ -1,6 +1,8 @@
 import {
   createContext,
+  Dispatch,
   ReactNode,
+  SetStateAction,
   useContext,
   useEffect,
   useMemo,
@@ -8,15 +10,17 @@ import {
 } from "react";
 
 import { useAuth } from "../auth/AuthProvider";
-import { initialResources } from "./data";
 import {
   addCommentRequest,
   addReplyRequest,
   createResourceRequest,
-  fetchMyResourcesRequest,
+  fetchCollectionsRequest,
   fetchCommentsRequest,
+  fetchMyResourcesRequest,
   fetchPublicResourcesRequest,
+  updateCollectionRequest,
   updateResourceRequest,
+  type BackendCollection,
 } from "./api";
 import { Resource } from "./types";
 import {
@@ -24,7 +28,6 @@ import {
   mapBackendComments,
   mapBackendResourceToMobileResource,
   mapMobileDraftToApiPayload,
-  toggleId,
   type ResourceDraft,
 } from "./utils";
 
@@ -46,9 +49,9 @@ type ResourcesContextValue = {
   isFavorite: (id: string) => boolean;
   isSavedForLater: (id: string) => boolean;
   isCompleted: (id: string) => boolean;
-  toggleFavorite: (id: string) => void;
-  toggleSavedForLater: (id: string) => void;
-  toggleCompleted: (id: string) => void;
+  toggleFavorite: (id: string) => Promise<void>;
+  toggleSavedForLater: (id: string) => Promise<void>;
+  toggleCompleted: (id: string) => Promise<void>;
   createResource: (draft: ResourceDraft) => Promise<string>;
   updateResource: (id: string, draft: ResourceDraft) => Promise<void>;
   addComment: (resourceId: string, message: string) => Promise<void>;
@@ -66,10 +69,10 @@ const ResourcesContext = createContext<ResourcesContextValue | undefined>(undefi
 
 export function ResourcesProvider({ children }: { children: ReactNode }) {
   const { user, isCitizen, accessToken } = useAuth();
-  const [resources, setResources] = useState<Resource[]>(initialResources);
-  const [favorites, setFavorites] = useState<string[]>(["res-1"]);
-  const [savedForLater, setSavedForLater] = useState<string[]>(["res-4"]);
-  const [completed, setCompleted] = useState<string[]>(["res-2"]);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [savedForLaterIds, setSavedForLaterIds] = useState<string[]>([]);
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -81,21 +84,35 @@ export function ResourcesProvider({ children }: { children: ReactNode }) {
       setSyncError(null);
 
       try {
-        const publicResources = await fetchPublicResourcesRequest();
-        const ownedResources = accessToken
-          ? await fetchMyResourcesRequest(accessToken)
-          : [];
+        const [publicResources, ownedResources, collectionsResponse] = await Promise.all([
+          fetchPublicResourcesRequest(),
+          accessToken ? fetchMyResourcesRequest(accessToken) : Promise.resolve([]),
+          accessToken ? fetchCollectionsRequest(accessToken) : Promise.resolve({ collections: [] }),
+        ]);
+        const collectionEntries = collectionsResponse.collections;
+        const collectionResources = collectionEntries.map((entry) => entry.resource);
         const nextResources = dedupeResourcesById([
           ...ownedResources,
           ...publicResources,
+          ...collectionResources,
         ]);
 
-        if (!cancelled) {
-          setResources(nextResources.map(mapBackendResourceToMobileResource));
+        if (cancelled) {
+          return;
         }
+
+        setResources(nextResources.map(mapBackendResourceToMobileResource));
+        setCollectionsFromEntries(collectionEntries, {
+          setFavoriteIds,
+          setSavedForLaterIds,
+          setCompletedIds,
+        });
       } catch (error) {
         if (!cancelled) {
-          setResources(initialResources);
+          setResources([]);
+          setFavoriteIds([]);
+          setSavedForLaterIds([]);
+          setCompletedIds([]);
           setSyncError(
             error instanceof Error
               ? error.message
@@ -117,16 +134,41 @@ export function ResourcesProvider({ children }: { children: ReactNode }) {
   }, [accessToken]);
 
   const value = useMemo<ResourcesContextValue>(() => {
-    const featuredResources = resources.filter((resource) => resource.featured).slice(0, 3);
+    const featuredResources = (
+      resources.some((resource) => resource.featured)
+        ? resources.filter((resource) => resource.featured)
+        : resources
+    ).slice(0, 3);
     const favoriteResources = resources.filter(
-      (resource) => favorites.indexOf(resource.id) >= 0
+      (resource) => favoriteIds.indexOf(resource.id) >= 0
     );
     const savedResources = resources.filter(
-      (resource) => savedForLater.indexOf(resource.id) >= 0
+      (resource) => savedForLaterIds.indexOf(resource.id) >= 0
     );
     const completedResources = resources.filter(
-      (resource) => completed.indexOf(resource.id) >= 0
+      (resource) => completedIds.indexOf(resource.id) >= 0
     );
+
+    async function updateCollection(
+      id: string,
+      payload: {
+        isFavorite?: boolean;
+        isSavedForLater?: boolean;
+        isCompleted?: boolean;
+      }
+    ) {
+      if (!canUseCitizenFeatures(user, isCitizen) || !accessToken) {
+        return;
+      }
+
+      const response = await updateCollectionRequest(accessToken, id, payload);
+      applyCollectionEntry(response.collection, {
+        setFavoriteIds,
+        setSavedForLaterIds,
+        setCompletedIds,
+      });
+      mergeResourceFromCollection(response.collection, setResources);
+    }
 
     return {
       resources,
@@ -143,31 +185,21 @@ export function ResourcesProvider({ children }: { children: ReactNode }) {
         completed: completedResources.length,
       },
       getResourceById: (id) => resources.find((resource) => resource.id === id),
-      isFavorite: (id) => favorites.indexOf(id) >= 0,
-      isSavedForLater: (id) => savedForLater.indexOf(id) >= 0,
-      isCompleted: (id) => completed.indexOf(id) >= 0,
+      isFavorite: (id) => favoriteIds.indexOf(id) >= 0,
+      isSavedForLater: (id) => savedForLaterIds.indexOf(id) >= 0,
+      isCompleted: (id) => completedIds.indexOf(id) >= 0,
       isSyncing,
       syncError,
-      toggleFavorite: (id) => {
-        if (!canUseCitizenFeatures(user, isCitizen)) {
-          return;
-        }
-
-        setFavorites((current) => toggleId(current, id));
+      toggleFavorite: async (id) => {
+        await updateCollection(id, { isFavorite: favoriteIds.indexOf(id) < 0 });
       },
-      toggleSavedForLater: (id) => {
-        if (!canUseCitizenFeatures(user, isCitizen)) {
-          return;
-        }
-
-        setSavedForLater((current) => toggleId(current, id));
+      toggleSavedForLater: async (id) => {
+        await updateCollection(id, {
+          isSavedForLater: savedForLaterIds.indexOf(id) < 0,
+        });
       },
-      toggleCompleted: (id) => {
-        if (!canUseCitizenFeatures(user, isCitizen)) {
-          return;
-        }
-
-        setCompleted((current) => toggleId(current, id));
+      toggleCompleted: async (id) => {
+        await updateCollection(id, { isCompleted: completedIds.indexOf(id) < 0 });
       },
       createResource: async (draft) => {
         if (!user || !isCitizen || !accessToken) {
@@ -210,7 +242,11 @@ export function ResourcesProvider({ children }: { children: ReactNode }) {
         setResources((current) =>
           current.map((resource) =>
             resource.id === resourceId
-              ? { ...resource, comments: mapBackendComments(comments) }
+              ? {
+                  ...resource,
+                  comments: mapBackendComments(comments),
+                  commentCount: comments.length,
+                }
               : resource
           )
         );
@@ -226,7 +262,11 @@ export function ResourcesProvider({ children }: { children: ReactNode }) {
         setResources((current) =>
           current.map((resource) =>
             resource.id === resourceId
-              ? { ...resource, comments: mapBackendComments(comments) }
+              ? {
+                  ...resource,
+                  comments: mapBackendComments(comments),
+                  commentCount: comments.length,
+                }
               : resource
           )
         );
@@ -237,7 +277,11 @@ export function ResourcesProvider({ children }: { children: ReactNode }) {
           setResources((current) =>
             current.map((resource) =>
               resource.id === resourceId
-                ? { ...resource, comments: mapBackendComments(comments) }
+                ? {
+                    ...resource,
+                    comments: mapBackendComments(comments),
+                    commentCount: comments.length,
+                  }
                 : resource
             )
           );
@@ -252,12 +296,12 @@ export function ResourcesProvider({ children }: { children: ReactNode }) {
     };
   }, [
     accessToken,
-    completed,
-    favorites,
+    completedIds,
+    favoriteIds,
     isCitizen,
     isSyncing,
     resources,
-    savedForLater,
+    savedForLaterIds,
     syncError,
     user,
   ]);
@@ -265,7 +309,7 @@ export function ResourcesProvider({ children }: { children: ReactNode }) {
   return <ResourcesContext.Provider value={value}>{children}</ResourcesContext.Provider>;
 }
 
-function dedupeResourcesById(resources: Array<{ ressource_id: number }>) {
+function dedupeResourcesById<T extends { ressource_id: number }>(resources: T[]) {
   const seen = new Set<number>();
 
   return resources.filter((resource) => {
@@ -275,6 +319,73 @@ function dedupeResourcesById(resources: Array<{ ressource_id: number }>) {
 
     seen.add(resource.ressource_id);
     return true;
+  });
+}
+
+function setCollectionsFromEntries(
+  entries: BackendCollection[],
+  setters: {
+    setFavoriteIds: (value: string[]) => void;
+    setSavedForLaterIds: (value: string[]) => void;
+    setCompletedIds: (value: string[]) => void;
+  }
+) {
+  setters.setFavoriteIds(
+    entries.filter((entry) => entry.is_favorite).map((entry) => String(entry.ressource_id))
+  );
+  setters.setSavedForLaterIds(
+    entries
+      .filter((entry) => entry.is_saved_for_later)
+      .map((entry) => String(entry.ressource_id))
+  );
+  setters.setCompletedIds(
+    entries.filter((entry) => entry.is_completed).map((entry) => String(entry.ressource_id))
+  );
+}
+
+function applyCollectionEntry(
+  entry: BackendCollection,
+  setters: {
+    setFavoriteIds: Dispatch<SetStateAction<string[]>>;
+    setSavedForLaterIds: Dispatch<SetStateAction<string[]>>;
+    setCompletedIds: Dispatch<SetStateAction<string[]>>;
+  }
+) {
+  const resourceId = String(entry.ressource_id);
+
+  setters.setFavoriteIds((current) =>
+    entry.is_favorite ? ensureId(current, resourceId) : current.filter((id) => id !== resourceId)
+  );
+  setters.setSavedForLaterIds((current) =>
+    entry.is_saved_for_later
+      ? ensureId(current, resourceId)
+      : current.filter((id) => id !== resourceId)
+  );
+  setters.setCompletedIds((current) =>
+    entry.is_completed ? ensureId(current, resourceId) : current.filter((id) => id !== resourceId)
+  );
+}
+
+function ensureId(collection: string[], id: string) {
+  return collection.indexOf(id) >= 0 ? collection : [...collection, id];
+}
+
+function mergeResourceFromCollection(
+  entry: BackendCollection,
+  setResources: Dispatch<SetStateAction<Resource[]>>
+) {
+  const nextResource = mapBackendResourceToMobileResource(entry.resource);
+
+  setResources((current) => {
+    const exists = current.some((resource) => resource.id === nextResource.id);
+
+    if (!exists) {
+      return [nextResource, ...current];
+    }
+
+    return current.map((resource) =>
+      resource.id === nextResource.id ? { ...resource, ...nextResource } : resource
+    );
   });
 }
 

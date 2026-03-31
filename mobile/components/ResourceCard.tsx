@@ -48,12 +48,12 @@ export function ResourceCard({ resource }: ResourceCardProps) {
         <View style={styles.actionWrap}>
           <View style={styles.actionRow}>
             <Pressable
-              onPress={(event) => {
+              onPress={async (event) => {
                 event.stopPropagation();
                 if (!isCitizen) {
                   return;
                 }
-                toggleFavorite(resource.id);
+                await toggleFavorite(resource.id);
               }}
               style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
             >
@@ -62,12 +62,12 @@ export function ResourceCard({ resource }: ResourceCardProps) {
               </Text>
             </Pressable>
             <Pressable
-              onPress={(event) => {
+              onPress={async (event) => {
                 event.stopPropagation();
                 if (!isCitizen) {
                   return;
                 }
-                toggleSavedForLater(resource.id);
+                await toggleSavedForLater(resource.id);
               }}
               style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
             >
@@ -78,12 +78,12 @@ export function ResourceCard({ resource }: ResourceCardProps) {
           </View>
           <View style={styles.actionRow}>
             <Pressable
-              onPress={(event) => {
+              onPress={async (event) => {
                 event.stopPropagation();
                 if (!isCitizen) {
                   return;
                 }
-                toggleCompleted(resource.id);
+                await toggleCompleted(resource.id);
               }}
               style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
             >

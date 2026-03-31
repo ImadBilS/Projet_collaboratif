@@ -21,6 +21,7 @@ export const initialResources: Resource[] = [
     readingTime: 5,
     likes: 48,
     tags: ["famille", "apaisement", "dialogue"],
+    commentCount: 1,
     featured: true,
     comments: [
       {
@@ -59,6 +60,7 @@ export const initialResources: Resource[] = [
     readingTime: 4,
     likes: 31,
     tags: ["amitié", "réparation", "écoute"],
+    commentCount: 0,
     featured: true,
     comments: [],
   },
@@ -82,6 +84,7 @@ export const initialResources: Resource[] = [
     readingTime: 7,
     likes: 52,
     tags: ["couple", "charge mentale", "organisation"],
+    commentCount: 0,
     comments: [],
   },
   {
@@ -104,6 +107,7 @@ export const initialResources: Resource[] = [
     readingTime: 3,
     likes: 40,
     tags: ["activité", "jeu", "famille"],
+    commentCount: 1,
     featured: true,
     comments: [
       {
@@ -135,6 +139,7 @@ export const initialResources: Resource[] = [
     readingTime: 6,
     likes: 27,
     tags: ["travail", "limites", "assertivité"],
+    commentCount: 0,
     comments: [],
   },
 ];

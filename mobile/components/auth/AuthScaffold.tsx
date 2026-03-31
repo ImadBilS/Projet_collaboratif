@@ -1,8 +1,6 @@
 import { Link } from "expo-router";
 import { ReactNode } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Text,
   View,
@@ -30,10 +28,7 @@ export function AuthScaffold({
 }: AuthScaffoldProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <View style={styles.flex}>
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
@@ -53,7 +48,7 @@ export function AuthScaffold({
             </Link>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

@@ -25,14 +25,33 @@ export type BackendResource = {
   ressource_id: number;
   wording: string;
   content?: string | null;
+  summary?: string | null;
   visibility: "PUBLIC" | "PRIVATE" | "GROUP";
   user_id: number;
   category: string[] | string;
+  format?: string | null;
+  relation?: string | null;
+  tags?: string[];
+  featured?: boolean;
+  _count?: {
+    reactions?: number;
+    comments?: number;
+  };
   user?: {
     firstname: string;
     lastname: string;
     city: string;
   };
+};
+
+export type BackendCollection = {
+  user_id: number;
+  ressource_id: number;
+  is_favorite: boolean;
+  is_saved_for_later: boolean;
+  is_completed: boolean;
+  updated_at: string;
+  resource: BackendResource;
 };
 
 export async function fetchPublicResourcesRequest() {
@@ -52,8 +71,13 @@ export async function createResourceRequest(
   payload: {
     wording: string;
     content: string;
+    summary: string;
     visibility: "PUBLIC" | "PRIVATE";
     category: string[];
+    format: string;
+    relation: string;
+    tags: string[];
+    featured: boolean;
   }
 ) {
   return apiRequest<BackendResource>("/ressources", {
@@ -69,8 +93,13 @@ export async function updateResourceRequest(
   payload: {
     wording: string;
     content: string;
+    summary: string;
     visibility: "PUBLIC" | "PRIVATE";
     category: string[];
+    format: string;
+    relation: string;
+    tags: string[];
+    featured: boolean;
   }
 ) {
   return apiRequest<BackendResource>(`/ressources/${resourceId}`, {
@@ -105,5 +134,27 @@ export async function addReplyRequest(token: string, commentId: string, text: st
     method: "POST",
     token,
     body: { text },
+  });
+}
+
+export async function fetchCollectionsRequest(token: string) {
+  return apiRequest<{ collections: BackendCollection[] }>("/collections/me", {
+    token,
+  });
+}
+
+export async function updateCollectionRequest(
+  token: string,
+  resourceId: string,
+  payload: {
+    isFavorite?: boolean;
+    isSavedForLater?: boolean;
+    isCompleted?: boolean;
+  }
+) {
+  return apiRequest<{ collection: BackendCollection }>(`/collections/${resourceId}`, {
+    method: "PATCH",
+    token,
+    body: payload,
   });
 }

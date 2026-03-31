@@ -43,6 +43,7 @@ export type Resource = {
   readingTime: number;
   likes: number;
   tags: string[];
+  commentCount: number;
   featured?: boolean;
   ownerId?: string;
   comments: ResourceComment[];

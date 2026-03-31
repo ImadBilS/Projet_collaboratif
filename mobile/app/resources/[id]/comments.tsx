@@ -37,13 +37,13 @@ export default function ResourceCommentsScreen() {
     );
   }
 
-  if (resource.access !== "public") {
+  if (resource.access !== "public" && !isCitizen) {
     return (
       <ScreenView>
         <View style={styles.content}>
           <EmptyState
             title="Commentaires non disponibles"
-            description="Dans ce prototype, seuls les contenus publics ouvrent un espace de commentaires."
+            description="Connecte-toi avec un compte citoyen pour consulter et participer aux échanges liés à cette ressource."
           />
         </View>
       </ScreenView>
@@ -54,10 +54,12 @@ export default function ResourceCommentsScreen() {
     <ScreenView>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Commentaires publics</Text>
+          <Text style={styles.headerTitle}>
+            {resource.access === "public" ? "Commentaires publics" : "Commentaires"}
+          </Text>
           <Text style={styles.headerText}>
-            Un espace simple pour commenter une ressource publique et répondre à
-            d’autres contributions.
+            Un espace simple pour commenter une ressource et répondre à d’autres
+            contributions.
           </Text>
         </View>
 

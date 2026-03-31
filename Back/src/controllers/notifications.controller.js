@@ -1,10 +1,11 @@
 const { prisma } = require("../db/prisma");
+const { canModerate } = require("../utils/roles");
 
 // Récupérer les notifications
 async function getNotifications(req, res) {
   const role = req.user.role;
 
-  if (role !== "Administrateur" && role !== "Modérateur") {
+  if (!canModerate(role)) {
     return res.status(403).json({ message: "Accès refusé" });
   }
 
@@ -20,7 +21,7 @@ async function markNotificationRead(req, res) {
   const role = req.user.role;
   const notifId = Number(req.params.id);
 
-  if (role !== "ADMIN" && role !== "MODERATOR") {
+  if (!canModerate(role)) {
     return res.status(403).json({ message: "Accès refusé." });
   }
 

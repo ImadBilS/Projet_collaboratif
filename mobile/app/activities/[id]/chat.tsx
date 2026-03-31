@@ -58,8 +58,8 @@ export default function ActivityChatScreen() {
               placeholderTextColor="#8a908b"
             />
             <Pressable
-              onPress={() => {
-                sendMessage(activity.id, message);
+              onPress={async () => {
+                await sendMessage(activity.id, message);
                 setMessage("");
               }}
               style={styles.sendButton}

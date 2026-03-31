@@ -6,7 +6,17 @@ async function create(req, res) {
   // (injecté dans req.user par le middleware d’authentification)
   const userId = req.user.user_id;
   // Récupération des données envoyées dans le body de la requête
-  const { wording, content, visibility, category } = req.body;
+  const {
+    wording,
+    content,
+    visibility,
+    category,
+    summary,
+    format,
+    relation,
+    tags,
+    featured,
+  } = req.body;
   // Normalisation de la visibilité pour correspondre à l’ENUM Prisma
   // (ex : "public" → "PUBLIC")
   const normalizedVisibility = visibility?.toUpperCase();
@@ -62,8 +72,13 @@ async function create(req, res) {
     data: {
       wording,
       content: content?.trim() || null,
+      summary: summary?.trim() || null,
       visibility: normalizedVisibility,
       category: normalizedCategory,
+      format: format?.trim() || null,
+      relation: relation?.trim() || null,
+      tags: normalizeTags(tags),
+      featured: Boolean(featured),
       // Association de la ressource à l’utilisateur connecté
       // via la relation Prisma (clé unique user_id)
       user: {
@@ -86,14 +101,24 @@ async function getRessources(req, res) {
         ressource_id: true,
         wording: true,
         content: true,
+        summary: true,
         visibility: true,
         user_id: true,
         category: true,
+        format: true,
+        relation: true,
+        tags: true,
+        featured: true,
         user: {
           select: {
             firstname: true,
             lastname: true,
             city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
           },
         },
       },
@@ -118,14 +143,24 @@ async function getRessourcesUser(req, res) {
         ressource_id: true,
         wording: true,
         content: true,
+        summary: true,
         visibility: true,
         user_id: true,
         category: true,
+        format: true,
+        relation: true,
+        tags: true,
+        featured: true,
         user: {
           select: {
             firstname: true,
             lastname: true,
             city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
           },
         },
       },
@@ -154,6 +189,12 @@ async function getRessourceById(req, res) {
             firstname: true,
             lastname: true,
             city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
+            comments: true,
           },
         },
       },
@@ -216,14 +257,24 @@ async function getPublicRessources(req, res) {
         ressource_id: true,
         wording: true,
         content: true,
+        summary: true,
         visibility: true,
         user_id: true,
         category: true,
+        format: true,
+        relation: true,
+        tags: true,
+        featured: true,
         user: {
           select: {
             firstname: true,
             lastname: true,
             city: true,
+          },
+        },
+        _count: {
+          select: {
+            reactions: true,
           },
         },
       },
@@ -340,7 +391,17 @@ async function updateRessource(req, res) {
   const ressourceId = Number(req.params.id); //Number pour s'assurer que c'est un entier
 
   //Récupérer les nouvelles données de la ressource depuis le corps de la requête
-  const { wording, content, visibility, category } = req.body;
+  const {
+    wording,
+    content,
+    visibility,
+    category,
+    summary,
+    format,
+    relation,
+    tags,
+    featured,
+  } = req.body;
 
   const normalizedVisibility = visibility?.toUpperCase();
   const normalizedCategory =
@@ -408,8 +469,13 @@ async function updateRessource(req, res) {
     data: {
       wording,
       content: content === undefined ? undefined : content?.trim() || null,
+      summary: summary === undefined ? undefined : summary?.trim() || null,
       visibility: normalizedVisibility,
       category: normalizedCategory,
+      format: format === undefined ? undefined : format?.trim() || null,
+      relation: relation === undefined ? undefined : relation?.trim() || null,
+      tags: tags === undefined ? undefined : normalizeTags(tags),
+      featured: featured === undefined ? undefined : Boolean(featured),
     },
   });
 
@@ -446,4 +512,13 @@ function normalizeCategories(category) {
   return categories
     .filter(Boolean)
     .map((item) => String(item).trim().toUpperCase());
+}
+
+function normalizeTags(tags) {
+  const values = Array.isArray(tags) ? tags : [tags];
+
+  return values
+    .filter(Boolean)
+    .map((item) => String(item).trim())
+    .filter(Boolean);
 }
