@@ -1,33 +1,4 @@
 name: CD
-
-# Pipeline de déploiement continu.
-#
-# À chaque push sur "main" :
-#   1. construit les images Docker du backend (Back/) et du frontend
-#      (front-web/) ;
-#   2. les publie sur le registre d'images GitHub (ghcr.io), taguées
-#      "latest" et avec le SHA du commit ;
-#   3. se connecte en SSH au serveur de production pour récupérer les
-#      nouvelles images et redémarrer les services (docker compose pull
-#      && docker compose up -d).
-#
-# Versioning : pour publier une version numérotée (ex: v1.0.0), créer et
-# pousser un tag Git :
-#   git tag v1.0.0 && git push origin v1.0.0
-# Les images seront alors également publiées avec ce tag de version.
-#
-# Secrets nécessaires (déjà configurés côté GitHub par l'équipe) :
-#   - SSH_HOST : adresse du serveur de production
-#   - SSH_USER : utilisateur SSH
-#   - SSH_KEY  : clé privée SSH correspondante
-#
-# Pré-requis côté serveur (une seule fois) :
-#   - avoir cloné le dépôt dans ~/Projet_collaboratif
-#   - avoir un fichier .env.prod renseigné (voir .env.prod.example)
-#   - rendre les packages ghcr.io du dépôt "publics" (Settings > Packages),
-#     afin que "docker compose pull" fonctionne sans authentification sur
-#     le serveur.
-
 on:
   push:
     branches: [main]

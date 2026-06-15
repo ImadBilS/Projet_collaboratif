@@ -1,7 +1,5 @@
 name: CI
-
 # Pipeline d'intégration continue : exécuté à chaque push et pull request,
-# sur les trois parties du projet (back, front web, mobile).
 on:
   push:
     branches: ["**"]
