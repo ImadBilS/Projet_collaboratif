@@ -312,12 +312,17 @@ function EditableResourceCard({
   );
   const [category, setCategory] = useState(resource.category[0] ?? "OTHER");
 
-  useEffect(() => {
+  // Si la ressource reçue change (ex: rafraîchissement après sauvegarde),
+  // on resynchronise les champs locaux pendant le rendu plutôt que dans un
+  // effet, conformément à la doc React sur l'ajustement d'état au rendu.
+  const [previousResource, setPreviousResource] = useState(resource);
+  if (previousResource !== resource) {
+    setPreviousResource(resource);
     setWording(resource.wording);
     setContent(resource.content ?? "");
     setVisibility(resource.visibility === "PUBLIC" ? "PUBLIC" : "PRIVATE");
     setCategory(resource.category[0] ?? "OTHER");
-  }, [resource]);
+  }
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

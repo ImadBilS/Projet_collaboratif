@@ -19,8 +19,8 @@ export default function Login() {
       await authService.login(email, password);
       // Succès -> On ira vers le Dashboard
       navigate("/dashboard");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur de connexion.");
     } finally {
       setIsLoading(false);
     }

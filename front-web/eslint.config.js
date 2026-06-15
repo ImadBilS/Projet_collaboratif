@@ -19,5 +19,10 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Permet d'exclure une propriété via le rest (ex: { confirmPassword: _, ...rest })
+      // sans déclencher d'erreur sur la variable extraite et non utilisée.
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
+    },
   },
 ])

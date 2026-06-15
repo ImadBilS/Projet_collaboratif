@@ -140,7 +140,7 @@ const handleChange = (
 
     try {
       // On exclut confirmPassword du payload envoyé à l'API
-      const { confirmPassword: _, ...rest } = form;
+      const { confirmPassword: _confirmPassword, ...rest } = form;
       await authService.register({
         ...rest,
         street_number: Number(rest.street_number),
@@ -148,8 +148,8 @@ const handleChange = (
       });
       setSuccess(true);
       setTimeout(() => navigate("/login"), 2500);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'inscription.");
     } finally {
       setIsLoading(false);
     }

@@ -102,7 +102,7 @@ export default function Dashboard() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
         <h2 className="text-lg font-bold text-slate-800 mb-4">Activité récente de la plateforme</h2>
         <div className="space-y-4">
-          {stats.recentActivity.map((act: any) => (
+          {stats.recentActivity.map((act) => (
             <div key={act.id} className="flex items-center justify-between border-b border-slate-50 pb-3 last:border-0">
               <div>
                 <span className="font-semibold text-slate-700">{act.user}</span>

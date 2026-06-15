@@ -52,7 +52,7 @@ export const authService = {
       persistSession(data.token, data.user, localStorage);
 
       return data;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur Login:", error);
       throw error;
     }
