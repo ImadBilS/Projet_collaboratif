@@ -8,13 +8,12 @@
 http:
   routers:
     app:
-      rule: "PathPrefix(`/`)"
+      rule: 'Host(`{{ env "DOMAIN" }}`)'
       entryPoints:
-        - web
+        - websecure
       service: app
-      # Pour activer HTTPS une fois un nom de domaine disponible, voir les
-      # commentaires dans docker-compose.prod.yml (service traefik) et
-      # remplacer la règle ci-dessus par "Host(`mondomaine.fr`)".
+      tls:
+        certResolver: le
 
   services:
     app:

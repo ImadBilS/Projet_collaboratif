@@ -3,25 +3,27 @@ services:
     image: traefik:v3.5
     container_name: app_traefik
     restart: unless-stopped
+    env_file:
+      - .env.prod
     command:
       - --providers.file.directory=/etc/traefik/dynamic
       - --providers.file.watch=true
       - --entrypoints.web.address=:80
-      # Pour activer HTTPS avec Let's Encrypt une fois un nom de domaine
-      # pointé sur le serveur, décommenter ces lignes (et adapter la règle
-      # du routeur dans traefik/dynamic.yml avec Host(`mondomaine.fr`) et
-      # un bloc "tls.certresolver: le") :
-      # - --entrypoints.websecure.address=:443
-      # - --certificatesresolvers.le.acme.httpchallenge=true
-      # - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
-      # - --certificatesresolvers.le.acme.email=admin@example.com
-      # - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.websecure.address=:443
+      # Redirige automatiquement tout le trafic HTTP vers HTTPS
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # Certificat HTTPS automatique via Let's Encrypt (challenge HTTP)
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
     ports:
       - "80:80"
-      # - "443:443"
+      - "443:443"
     volumes:
       - ./traefik/dynamic.yml:/etc/traefik/dynamic/dynamic.yml:ro
-      # - letsencrypt:/letsencrypt
+      - letsencrypt:/letsencrypt
     depends_on:
       - frontend
 
@@ -70,4 +72,4 @@ services:
 
 volumes:
   pgdata_prod:
-  # letsencrypt:
+  letsencrypt:

@@ -32,7 +32,7 @@ déploiement).
                 │                  Serveur (VPS / VM)                   │
                 │                                                        │
   Internet      │   ┌────────────┐                                      │
-  (port 80) ───▶│──▶│  Traefik   │  reverse proxy                       │
+  (port 80/443)─▶│──▶│  Traefik   │  reverse proxy + HTTPS (Let's Encrypt)│
                 │   │ (container)│                                       │
                 │   └─────┬──────┘                                      │
                 │         │ route /                                      │
@@ -66,10 +66,11 @@ déploiement).
 
 Composants :
 
-- **Traefik** : reverse proxy, point d'entrée unique sur le port 80. Route le
-  trafic vers le conteneur `frontend`. Préparé pour activer HTTPS
-  (Let's Encrypt) dès qu'un nom de domaine sera disponible
-  (voir commentaires dans `docker-compose.prod.yml`).
+- **Traefik** : reverse proxy, point d'entrée unique sur les ports 80/443.
+  Redirige automatiquement le trafic HTTP vers HTTPS et gère le certificat
+  TLS via Let's Encrypt (résolveur ACME `le`, défi HTTP-01) pour le nom de
+  domaine `DOMAIN` (DNS name label Azure, voir `.env.prod`). Route ensuite
+  le trafic vers le conteneur `frontend`.
 - **frontend** : application React (Vite) servie par nginx. nginx fait
   également proxy vers le `backend` pour les routes d'API
   (`/api`, `/stats`, `/ressources`, ...), afin de n'exposer qu'un seul port.
@@ -84,7 +85,7 @@ Composants :
 | GitHub Actions | Intégration continue (`ci.yml`) et déploiement continu (`cd.yml`) |
 | Docker / Docker Compose | Conteneurisation et orchestration des services (backend, frontend, base de données, reverse proxy) |
 | ghcr.io (GitHub Container Registry) | Stockage des images Docker construites par la CD |
-| Traefik | Reverse proxy / point d'entrée HTTP (HTTPS prêt à activer) |
+| Traefik | Reverse proxy / point d'entrée HTTP(S), certificats Let's Encrypt automatiques |
 | PostgreSQL | Base de données relationnelle |
 
 ## 4. Étapes de déploiement
@@ -172,7 +173,7 @@ Environnement de production déployé sur une VM Azure :
 | CPU | 2 vCPU | Suffisant pour Traefik + Node.js (backend) + nginx (frontend) + PostgreSQL en charge modérée |
 | RAM | 4 Go | PostgreSQL (~512 Mo - 1 Go), backend Node.js (~256-512 Mo), frontend nginx (faible), Traefik (faible), marge pour le système |
 | Stockage | 20-30 Go SSD | Système, images Docker, volume PostgreSQL, logs |
-| Réseau | Port 80 ouvert (443 prévu pour HTTPS) | Traefik est le seul point d'entrée HTTP(S) |
+| Réseau | Ports 80 et 443 ouverts | Traefik est le seul point d'entrée HTTP(S), le port 80 redirige vers le 443 et sert le défi Let's Encrypt |
 
 Ce dimensionnement correspond à une instance type **Standard_B2s** (Azure) ou
 équivalent (2 vCPU / 4 Go RAM), suffisante pour un usage de type projet
