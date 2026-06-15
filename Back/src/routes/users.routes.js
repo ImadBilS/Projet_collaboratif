@@ -18,6 +18,7 @@ const router = express.Router();
 router.post("/", authenticateJWT, createUserProfile);
 
 // READ
+router.get("/", authenticateJWT, getAllUsers);
 router.get("/:user_id", authenticateJWT, getUserById);
 
 // UPDATE
@@ -28,7 +29,8 @@ router.delete("/:user_id", authenticateJWT, deleteUserProfile);
 
 // Role
 router.put("/:user_id/role", authenticateJWT, updateUserRole);
-module.exports = router;
 
 // Modifier les données users
 router.put("/:user_id/account", authenticateJWT, updateUserAccount);
+
+module.exports = router;
