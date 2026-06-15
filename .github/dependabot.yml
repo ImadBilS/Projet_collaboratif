@@ -13,6 +13,11 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # Les montées de version majeures cassent souvent des peer
+      # dependencies et nécessitent une revue manuelle.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # Front web (React / Vite)
   - package-ecosystem: "npm"
@@ -22,8 +27,15 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # Mobile (React Native / Expo)
+  # Les packages "expo-*"/"react-native-*" suivent le versionnage de
+  # l'Expo SDK utilisé (actuellement SDK 54) : une montée majeure casse les
+  # peer dependencies avec expo-router/expo. À mettre à jour uniquement via
+  # "npx expo install" lors d'une migration de SDK.
   - package-ecosystem: "npm"
     directory: "/mobile"
     schedule:
@@ -31,6 +43,9 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   # Images Docker (backend, frontend)
   - package-ecosystem: "docker"
