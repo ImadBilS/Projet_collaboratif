@@ -23,6 +23,24 @@ jobs:
         working-directory: Back
         run: npm ci
 
+      - name: Audit de sécurité des dépendances
+        working-directory: Back
+        run: |
+          npm audit --json > audit.json || true
+          LOW=$(jq '.metadata.vulnerabilities.low + .metadata.vulnerabilities.info' audit.json)
+          MODERATE=$(jq '.metadata.vulnerabilities.moderate' audit.json)
+          HIGH=$(jq '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' audit.json)
+          {
+            echo "### 🔍 Audit des dépendances (Back)"
+            echo ""
+            echo "- 🟢 Faible : $LOW"
+            echo "- 🟠 Moyenne : $MODERATE"
+            echo "- 🔴 Élevée/critique : $HIGH"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::warning::$HIGH vulnérabilité(s) de sévérité élevée/critique dans Back (voir 'npm audit')"
+          fi
+
       - name: Run tests
         working-directory: Back
         run: npm test
@@ -42,6 +60,24 @@ jobs:
       - name: Install dependencies
         working-directory: front-web
         run: npm ci
+
+      - name: Audit de sécurité des dépendances
+        working-directory: front-web
+        run: |
+          npm audit --json > audit.json || true
+          LOW=$(jq '.metadata.vulnerabilities.low + .metadata.vulnerabilities.info' audit.json)
+          MODERATE=$(jq '.metadata.vulnerabilities.moderate' audit.json)
+          HIGH=$(jq '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' audit.json)
+          {
+            echo "### 🔍 Audit des dépendances (front-web)"
+            echo ""
+            echo "- 🟢 Faible : $LOW"
+            echo "- 🟠 Moyenne : $MODERATE"
+            echo "- 🔴 Élevée/critique : $HIGH"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::warning::$HIGH vulnérabilité(s) de sévérité élevée/critique dans front-web (voir 'npm audit')"
+          fi
 
       - name: Lint
         working-directory: front-web
@@ -70,6 +106,24 @@ jobs:
       - name: Install dependencies
         working-directory: mobile
         run: npm ci
+
+      - name: Audit de sécurité des dépendances
+        working-directory: mobile
+        run: |
+          npm audit --json > audit.json || true
+          LOW=$(jq '.metadata.vulnerabilities.low + .metadata.vulnerabilities.info' audit.json)
+          MODERATE=$(jq '.metadata.vulnerabilities.moderate' audit.json)
+          HIGH=$(jq '.metadata.vulnerabilities.high + .metadata.vulnerabilities.critical' audit.json)
+          {
+            echo "### 🔍 Audit des dépendances (mobile)"
+            echo ""
+            echo "- 🟢 Faible : $LOW"
+            echo "- 🟠 Moyenne : $MODERATE"
+            echo "- 🔴 Élevée/critique : $HIGH"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::warning::$HIGH vulnérabilité(s) de sévérité élevée/critique dans mobile (voir 'npm audit')"
+          fi
 
       - name: Run tests
         working-directory: mobile

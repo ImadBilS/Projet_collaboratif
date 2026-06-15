@@ -16,7 +16,7 @@ dispositions prises au regard du RGPD.
 | 3 | **Injection (SQL, etc.)** | Requêtes vers PostgreSQL construites à partir d'entrées utilisateur | Faible | Élevé | **Moyenne** | Utilisation de **Prisma** (requêtes paramétrées par défaut, pas de SQL concaténé) ; validation des entrées côté backend |
 | 4 | **Insecure Design** | Fonctionnalités sensibles (signalements, modération) mal pensées dès la conception | Faible | Moyen | **Faible** | Revue de code via pull requests ; séparation des rôles (USER / ADMIN) |
 | 5 | **Security Misconfiguration** | Configuration par défaut exposée (CORS trop permissif, en-têtes HTTP manquants, mode debug en prod) | Moyenne | Moyen | **Moyenne** | `CORS_ORIGIN` restreint au domaine du front en production ; `NODE_ENV=production` ; ajout recommandé du middleware `helmet` pour les en-têtes de sécurité HTTP |
-| 6 | **Vulnerable and Outdated Components** | Dépendances npm obsolètes contenant des failles connues | Moyenne | Moyen | **Moyenne** | CI exécutant `npm ci` à chaque build (versions figées par `package-lock.json`) ; revue régulière des dépendances (`npm audit`) |
+| 6 | **Vulnerable and Outdated Components** | Dépendances npm obsolètes contenant des failles connues | Moyenne | Moyen | **Moyenne** | CI exécutant `npm ci` à chaque build (versions figées par `package-lock.json`) ; audit automatique (`npm audit`) à chaque exécution de la CI (voir ci-dessous) ; mises à jour automatisées via Dependabot (voir [plan-maintenance.md](./plan-maintenance.md)) |
 | 7 | **Identification and Authentication Failures** | Vol de session, absence de limitation des tentatives de connexion | Moyenne | Élevé | **Élevée** | JWT avec expiration courte (`JWT_EXPIRES_IN`) + refresh token (`REFRESH_TOKEN_EXPIRES_IN`) ; recommandé : limitation du nombre de tentatives de connexion (`express-rate-limit`) sur `/api/auth/login` |
 | 8 | **Software and Data Integrity Failures** | Image Docker modifiée / dépendance compromise lors du build | Faible | Moyen | **Faible** | Images construites depuis le code source via CI (GitHub Actions), publiées sur `ghcr.io` (registre privé lié au dépôt) |
 | 9 | **Security Logging and Monitoring Failures** | Absence de traçabilité des actions sensibles (connexions, modifications de rôle, signalements traités) | Moyenne | Moyen | **Moyenne** | Logs applicatifs sur les actions d'authentification et d'administration (voir [bonnes-pratiques.md](./bonnes-pratiques.md)) ; conservation des logs Docker (`docker compose logs`) |
@@ -35,6 +35,23 @@ Faible        Faible      Faible      Moyenne
 
 Les risques classés **Élevée** (#1 Broken Access Control, #7 Authentification)
 sont traités en priorité.
+
+### Audit des dépendances (CI)
+
+Chaque exécution de la CI (`.github/workflows/ci.yml`) lance `npm audit`
+pour le backend, le front-web et le mobile, et publie un résumé coloré par
+niveau de gravité dans le résumé du job GitHub Actions :
+
+| Niveau | Couleur | Sévérité npm audit |
+| ------ | ------- | -------------------- |
+| Faible | 🟢 vert | `info`, `low` |
+| Moyenne | 🟠 orange | `moderate` |
+| Élevée / critique | 🔴 rouge | `high`, `critical` |
+
+Une vulnérabilité 🔴 déclenche un avertissement (`::warning::`) visible sur
+le run, sans faire échouer la CI (l'audit est informatif : les correctifs
+passent par les pull requests Dependabot, voir
+[plan-maintenance.md](./plan-maintenance.md)).
 
 ## 2. Mesures préventives transverses
 
