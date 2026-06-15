@@ -1,8 +1,4 @@
 # Dependabot : maintenance automatisée des dépendances.
-#
-# Pour chaque écosystème, Dependabot ouvre des pull requests hebdomadaires
-# qui mettent à jour les dépendances (versions mineures/patch). La CI
-# (.github/workflows/ci.yml) valide ensuite ces PR avant fusion.
 version: 2
 updates:
   # Backend (Node.js / Express / Prisma)
@@ -14,8 +10,6 @@ updates:
     labels:
       - "dependencies"
     ignore:
-      # Les montées de version majeures cassent souvent des peer
-      # dependencies et nécessitent une revue manuelle.
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
@@ -30,12 +24,6 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-
-  # Mobile (React Native / Expo)
-  # Les packages "expo-*"/"react-native-*" suivent le versionnage de
-  # l'Expo SDK utilisé (actuellement SDK 54) : une montée majeure casse les
-  # peer dependencies avec expo-router/expo. À mettre à jour uniquement via
-  # "npx expo install" lors d'une migration de SDK.
   - package-ecosystem: "npm"
     directory: "/mobile"
     schedule:
