@@ -214,10 +214,20 @@ async function getStats(req, res) {
     const totalComments = await prisma.comments.count();
     const totalReactions = await prisma.react.count();
 
-    const recentActivity = {
-      comments: recentComments,
-      reports: recentReports,
-    };
+    const recentActivity = [
+      ...recentComments.map((comment) => ({
+        id: `comment-${comment.comment_id}`,
+        user: `${comment.user.firstname} ${comment.user.lastname}`,
+        action: `a commenté "${comment.resource.wording}"`,
+        date: comment.created_at,
+      })),
+      ...recentReports.map((report) => ({
+        id: `report-${report.report_id}`,
+        user: `${report.user.firstname} ${report.user.lastname}`,
+        action: `a signalé : ${report.reason}`,
+        date: report.created_at,
+      })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Réponse finale
     res.json({
