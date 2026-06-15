@@ -49,6 +49,10 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
+    // Chargement initial des données depuis l'API : ce setState asynchrone
+    // (dans loadUsers) est le point d'entrée standard pour synchroniser
+    // l'état avec une source externe au montage du composant.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadUsers();
   }, []);
 
