@@ -1,0 +1,56 @@
+# Dependabot : maintenance automatisée des dépendances.
+#
+# Pour chaque écosystème, Dependabot ouvre des pull requests hebdomadaires
+# qui mettent à jour les dépendances (versions mineures/patch). La CI
+# (.github/workflows/ci.yml) valide ensuite ces PR avant fusion.
+version: 2
+updates:
+  # Backend (Node.js / Express / Prisma)
+  - package-ecosystem: "npm"
+    directory: "/Back"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+  # Front web (React / Vite)
+  - package-ecosystem: "npm"
+    directory: "/front-web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+  # Mobile (React Native / Expo)
+  - package-ecosystem: "npm"
+    directory: "/mobile"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
+  # Images Docker (backend, frontend)
+  - package-ecosystem: "docker"
+    directory: "/Back"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "docker"
+    directory: "/front-web"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+
+  # Workflows GitHub Actions (ci.yml, cd.yml)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"

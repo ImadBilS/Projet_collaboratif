@@ -90,8 +90,11 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 ## 3. Maintenance préventive
 
-- **Dépendances** : revue régulière des dépendances npm (backend, front,
-  mobile) pour appliquer les correctifs de sécurité.
+- **Dépendances** : automatisée via **Dependabot**
+  (`.github/dependabot.yml`), qui ouvre chaque semaine des pull requests de
+  mise à jour pour les dépendances npm (backend, front-web, mobile), les
+  images Docker (backend, front-web) et les actions GitHub utilisées dans
+  les workflows. Ces PR sont validées par la CI avant fusion.
 - **Sauvegardes** : le volume Docker `pgdata_prod` contient les données de
   production ; une sauvegarde régulière (`pg_dump`) est recommandée avant
   toute opération de maintenance importante.
