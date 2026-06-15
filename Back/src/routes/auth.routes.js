@@ -15,7 +15,13 @@ const {
 const router = express.Router();
 
 // Routes publiques (pas besoin de token)
-router.post("/register", register);
+router.post("/register", register); // pour user
+router.post(
+  "/admin-register",
+  authenticateJWT,
+  authorizeRoles("Administrateur"),
+  register,
+); // pour admin
 router.post("/login", login);
 router.post("/refresh", refresh);
 router.post("/logout", logout);
@@ -29,7 +35,7 @@ router.get(
   authorizeRoles("Administrateur"),
   (req, res) => {
     res.status(200).json({ message: "Accès admin OK" });
-  }
+  },
 );
 
 module.exports = router;

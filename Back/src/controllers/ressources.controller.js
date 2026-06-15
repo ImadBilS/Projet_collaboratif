@@ -1,32 +1,24 @@
 const { prisma } = require("../db/prisma");
 
-//Contrôleur création de ressource
-async function create(req, res) {
-  // Récupération de l’identifiant utilisateur depuis le JWT
-  // (injecté dans req.user par le middleware d’authentification)
-  const userId = req.user.user_id;
-  // Récupération des données envoyées dans le body de la requête
-  const {
-    wording,
-    content,
-    visibility,
-    category,
-    summary,
-    format,
-    relation,
-    tags,
-    featured,
-  } = req.body;
-  // Normalisation de la visibilité pour correspondre à l’ENUM Prisma
-  // (ex : "public" → "PUBLIC")
-  const normalizedVisibility = visibility?.toUpperCase();
-  const normalizedCategory = normalizeCategories(category);
+function normalizeCategories(category) {
+  const categories = Array.isArray(category) ? category : [category];
 
-  // Liste des valeurs autorisées pour l’ENUM Visibility
-  const allowedVisibilities = ["PUBLIC", "PRIVATE"];
+  return categories
+    .filter(Boolean)
+    .map((item) => String(item).trim().toUpperCase());
+}
 
-  // Type de catégorie
-  const allowedCategories = [
+function normalizeTags(tags) {
+  const values = Array.isArray(tags) ? tags : [tags];
+
+  return values
+    .filter(Boolean)
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+}
+
+  const allowedVisibilities = new Set(["PUBLIC", "PRIVATE"]);
+  const allowedCategories = new Set([
     "FOOD",
     "CLOTHES",
     "TOOLS",
@@ -47,17 +39,40 @@ async function create(req, res) {
     "SPORT",
     "CULTURE",
     "OTHER",
-  ];
+  ]);
 
-  // Vérifie que la visibilité est valide
-  if (!allowedVisibilities.includes(normalizedVisibility)) {
+
+//Contrôleur création de ressource
+async function create(req, res) {
+  const userId = req.user.user_id;
+  // Récupération des données envoyées dans le body de la requête
+  const {
+    wording,
+    content,
+    visibility,
+    category,
+    city,
+    description,
+    summary,
+    format,
+    relation,
+    tags,
+    featured,
+  } = req.body;
+  // Normalisation de la visibilité pour correspondre à l’ENUM Prisma
+  // (ex : "public" → "PUBLIC")
+  const normalizedVisibility = visibility?.toUpperCase();
+  const normalizedCategory = normalizeCategories(category);
+
+
+  if (!allowedVisibilities.has(normalizedVisibility)) {
     return res.status(400).json({ message: "Visibility invalide." });
   }
 
   // Vérifier la catégorie
   if (
     normalizedCategory.length === 0 ||
-    normalizedCategory.some((item) => !allowedCategories.includes(item))
+    normalizedCategory.some((item) => !allowedCategories.has(item))
   ) {
     return res.status(400).json({ message: "Catégorie invalide." });
   }
@@ -67,7 +82,7 @@ async function create(req, res) {
     return res.status(400).json({ message: "Le champ 'wording' est requis." });
   }
 
-  // Création de la ressource en base de donnéesgit c
+  // Création de la ressource
   const resource = await prisma.resources.create({
     data: {
       wording,
@@ -75,6 +90,8 @@ async function create(req, res) {
       summary: summary?.trim() || null,
       visibility: normalizedVisibility,
       category: normalizedCategory,
+      city: city?.trim() || null,
+      description: description?.trim() || null,
       format: format?.trim() || null,
       relation: relation?.trim() || null,
       tags: normalizeTags(tags),
@@ -89,7 +106,6 @@ async function create(req, res) {
     },
   });
 
-  // Retourne la ressource créée au client
   res.json(resource);
 }
 
@@ -102,6 +118,8 @@ async function getRessources(req, res) {
         wording: true,
         content: true,
         summary: true,
+        city: true,
+        description: true,
         visibility: true,
         user_id: true,
         category: true,
@@ -176,14 +194,23 @@ async function getRessourcesUser(req, res) {
 //Recupérer une ressource
 async function getRessourceById(req, res) {
   try {
-    const userId = req.user.user_id; // récupéré via le middlware JWT
-    const ressourceId = parseInt(req.params.id, 10);
-    // Répcupérer la ressource
+    const ressourceId = Number(req.params.id);
+
     const ressource = await prisma.resources.findUnique({
-      where: {
-        ressource_id: ressourceId,
-      },
-      include: {
+      where: { ressource_id: ressourceId },
+      select: {
+        ressource_id: true,
+        wording: true,
+        content: true,
+        summary: true,
+        city: true,
+        description: true,
+        visibility: true,
+        category: true,
+        format: true,
+        relation: true,
+        tags: true,
+        featured: true,
         user: {
           select: {
             firstname: true,
@@ -204,41 +231,6 @@ async function getRessourceById(req, res) {
       return res.status(404).json({ message: "Ressource non trouvée" });
     }
 
-    // Vérifier si une vue existe déjà pour ce user + ressource
-    const existingView = await prisma.views.findUnique({
-      where: {
-        user_id_ressource_id: {
-          user_id: userId,
-          ressource_id: ressourceId,
-        },
-      },
-    });
-
-    // Si la vue existe on incrémente la table view
-    if (existingView) {
-      await prisma.views.update({
-        where: {
-          user_id_ressource_id: {
-            user_id: userId,
-            ressource_id: ressourceId,
-          },
-        },
-        data: {
-          view_number: existingView.view_number + 1,
-        },
-      });
-    }
-    // Sinon on crée la ligne
-    else {
-      await prisma.views.create({
-        data: {
-          user_id: userId,
-          ressource_id: ressourceId,
-          view_number: 1,
-        },
-      });
-    }
-    // On retourne la ressource
     res.json(ressource);
   } catch (error) {
     console.error("Erreur lors de la récupération de la ressource :", error);
@@ -303,7 +295,7 @@ async function getNearbyRessourcesForMe(req, res) {
       },
     });
 
-    if (!user || !user.postal_code) {
+    if (!user?.postal_code) {
       return res.status(400).json({
         message: "Code postal utilisateur manquant.",
       });
@@ -318,8 +310,8 @@ async function getNearbyRessourcesForMe(req, res) {
         user: {
           // Filtrer par code postal dans le même département
           postal_code: {
-            gte: parseInt(department + "000"),
-            lte: parseInt(department + "999"),
+            gte: Number.parseInt(department + "000"),
+            lte: Number.parseInt(department + "999"),
           },
         },
       },
@@ -350,7 +342,7 @@ async function deleteRessource(req, res) {
   try {
     const userId = req.user.user_id;
     const role = req.user.role;
-    const ressourceId = parseInt(req.params.id, 10);
+    const ressourceId = Number.parseInt(req.params.id, 10);
 
     const existingResource = await prisma.resources.findUnique({
       where: {
@@ -362,8 +354,7 @@ async function deleteRessource(req, res) {
       return res.status(404).json({ message: "Ressource non trouvée." });
     }
 
-    const canModerate =
-      role === "Administrateur" || role === "Modérateur";
+    const canModerate = role === "Administrateur" || role === "Modérateur";
 
     if (existingResource.user_id !== userId && !canModerate) {
       return res.status(403).json({ message: "Accès refusé." });
@@ -385,10 +376,9 @@ async function deleteRessource(req, res) {
 
 //Modifer une ressource (optionnel)
 async function updateRessource(req, res) {
-  //Récupérer l'id de l'utilisateur connecté et l'id de la ressource à modifier
   const userId = req.user.user_id;
   const role = req.user.role;
-  const ressourceId = Number(req.params.id); //Number pour s'assurer que c'est un entier
+  const ressourceId = Number(req.params.id);
 
   //Récupérer les nouvelles données de la ressource depuis le corps de la requête
   const {
@@ -396,6 +386,8 @@ async function updateRessource(req, res) {
     content,
     visibility,
     category,
+    city,
+    description,
     summary,
     format,
     relation,
@@ -407,38 +399,11 @@ async function updateRessource(req, res) {
   const normalizedCategory =
     category === undefined ? undefined : normalizeCategories(category);
 
-  const allowedVisibilities = ["PUBLIC", "PRIVATE"];
-  const allowedCategories = [
-    "FOOD",
-    "CLOTHES",
-    "TOOLS",
-    "TRANSPORT",
-    "HOUSING",
-    "SERVICES",
-    "EDUCATION",
-    "HEALTH",
-    "SOCIAL_SUPPORT",
-    "EVENTS",
-    "COMMUNITY",
-    "VOLUNTEERING",
-    "DONATION",
-    "JOB_HELP",
-    "CHILDCARE",
-    "ELDERLY_HELP",
-    "PETS",
-    "SPORT",
-    "CULTURE",
-    "OTHER",
-  ];
 
-  //Vérifier que la ressource existe et appartient à l'utilisateur
   const ressource = await prisma.resources.findUnique({
-    where: {
-      ressource_id: ressourceId,
-    },
+    where: { ressource_id: ressourceId },
   });
 
-  //Si la ressource n'existe pas ou n'appartient pas à l'utilisateur connecté
   if (!ressource) {
     return res.status(404).json({ message: "Ressource non trouvée." });
   }
@@ -449,37 +414,39 @@ async function updateRessource(req, res) {
     return res.status(403).json({ message: "Accès refusé." });
   }
 
-  if (visibility && !allowedVisibilities.includes(normalizedVisibility)) {
+  if (visibility && !allowedVisibilities.has(normalizedVisibility)) {
     return res.status(400).json({ message: "Visibility invalide." });
   }
 
   if (
     normalizedCategory &&
     (normalizedCategory.length === 0 ||
-      normalizedCategory.some((item) => !allowedCategories.includes(item)))
+      normalizedCategory.some((item) => !allowedCategories.has(item)))
   ) {
     return res.status(400).json({ message: "Catégorie invalide." });
   }
 
   // Met à jour la ressource
-  const updatedRessource = await prisma.resources.update({
-    where: {
-      ressource_id: ressourceId,
-    },
+  const updated = await prisma.resources.update({
+    where: { ressource_id: ressourceId },
     data: {
-      wording,
-      content: content === undefined ? undefined : content?.trim() || null,
-      summary: summary === undefined ? undefined : summary?.trim() || null,
-      visibility: normalizedVisibility,
-      category: normalizedCategory,
-      format: format === undefined ? undefined : format?.trim() || null,
-      relation: relation === undefined ? undefined : relation?.trim() || null,
-      tags: tags === undefined ? undefined : normalizeTags(tags),
-      featured: featured === undefined ? undefined : Boolean(featured),
+      ...(wording !== undefined && { wording }),
+      ...(content !== undefined && { content: content?.trim() || null }),
+      ...(summary !== undefined && { summary: summary?.trim() || null }),
+      ...(city !== undefined && { city: city?.trim() || null }),
+      ...(description !== undefined && { description: description?.trim() || null }),
+      ...(normalizedVisibility && { visibility: normalizedVisibility }),
+      ...(format !== undefined && { format: format?.trim() || null }),
+      ...(relation !== undefined && { relation: relation?.trim() || null }),
+      ...(tags !== undefined && { tags: normalizeTags(tags) }),
+      ...(featured !== undefined && { featured: Boolean(featured) }),
+      ...(normalizedCategory !== undefined && {
+        category: normalizedCategory,
+      }),
     },
   });
 
-  res.json(updatedRessource);
+  res.json(updated);
 }
 
 // Filtrer par catégorie
@@ -505,20 +472,3 @@ module.exports = {
   updateRessource,
   getRessourcesByCategory,
 };
-
-function normalizeCategories(category) {
-  const categories = Array.isArray(category) ? category : [category];
-
-  return categories
-    .filter(Boolean)
-    .map((item) => String(item).trim().toUpperCase());
-}
-
-function normalizeTags(tags) {
-  const values = Array.isArray(tags) ? tags : [tags];
-
-  return values
-    .filter(Boolean)
-    .map((item) => String(item).trim())
-    .filter(Boolean);
-}

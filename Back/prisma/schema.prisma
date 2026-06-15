@@ -75,7 +75,7 @@ model GroupRelation {
   groups Group[]
 }
 
-enum ResourceCategory {
+enum CategoryEnum {
   FOOD
   CLOTHES
   TOOLS
@@ -101,6 +101,8 @@ enum ResourceCategory {
 model Resources {
   ressource_id Int            @id @default(autoincrement())
   wording      String
+  description  String?
+  city         String?
   content      String?
   summary      String?
   visibility   VisibilityEnum
@@ -110,7 +112,7 @@ model Resources {
   tags         String[]       @default([])
   featured     Boolean        @default(false)
 
-  category  ResourceCategory[]
+  category  CategoryEnum[]
   user      User               @relation(fields: [user_id], references: [user_id])
   comments  Comments[]
   reactions React[]
@@ -118,6 +120,9 @@ model Resources {
   activities Activity[]
   progress_entries UserResourceProgress[]
 }
+
+
+
 
 model Comments {
   comment_id   Int               @id @default(autoincrement())
