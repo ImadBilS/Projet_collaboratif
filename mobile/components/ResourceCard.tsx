@@ -1,4 +1,4 @@
-import { Link } from "expo-router";
+import { router } from "expo-router";
 import { Pressable, Share, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../features/auth/AuthProvider";
@@ -23,8 +23,13 @@ export function ResourceCard({ resource }: ResourceCardProps) {
   const locked = resource.access === "restricted" && !isCitizen;
 
   return (
-    <Link href={`/resources/${resource.id}`} asChild>
-      <Pressable style={styles.card}>
+    <View style={styles.card}>
+      <Pressable
+        onPress={() => {
+          router.push(`/resources/${resource.id}`);
+        }}
+        style={styles.contentPressable}
+      >
         <View style={styles.header}>
           <Text style={[styles.badge, resource.access === "restricted" && styles.badgeRestricted]}>
             {resource.access === "public" ? "Public" : "Restreint"}
@@ -44,79 +49,84 @@ export function ResourceCard({ resource }: ResourceCardProps) {
             </View>
           ))}
         </View>
-
-        <View style={styles.actionWrap}>
-          <View style={styles.actionRow}>
-            <Pressable
-              onPress={async (event) => {
-                event.stopPropagation();
-                if (!isCitizen) {
-                  return;
-                }
-                await toggleFavorite(resource.id);
-              }}
-              style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
-            >
-              <Text style={styles.smallButtonLabel}>
-                {isFavorite(resource.id) ? "Favori" : "Favori +"}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={async (event) => {
-                event.stopPropagation();
-                if (!isCitizen) {
-                  return;
-                }
-                await toggleSavedForLater(resource.id);
-              }}
-              style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
-            >
-              <Text style={styles.smallButtonLabel}>
-                {isSavedForLater(resource.id) ? "De côté" : "Mettre de côté"}
-              </Text>
-            </Pressable>
-          </View>
-          <View style={styles.actionRow}>
-            <Pressable
-              onPress={async (event) => {
-                event.stopPropagation();
-                if (!isCitizen) {
-                  return;
-                }
-                await toggleCompleted(resource.id);
-              }}
-              style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
-            >
-              <Text style={styles.smallButtonLabel}>
-                {isCompleted(resource.id) ? "Exploitée" : "Marquer exploitée"}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={(event) => {
-                event.stopPropagation();
-                void Share.share({
-                  message: `Découvre cette ressource : ${resource.title}`,
-                });
-              }}
-              style={styles.smallButton}
-            >
-              <Text style={styles.smallButtonLabel}>Partager</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {!isCitizen && user ? (
-          <Text style={styles.lockedText}>
-            Mode invité: consultation et partage uniquement.
-          </Text>
-        ) : null}
-        {locked ? (
-          <Text style={styles.lockedText}>
-            Connecte-toi pour voir le contenu complet.
-          </Text>
-        ) : null}
       </Pressable>
-    </Link>
+
+      <View style={styles.actionWrap}>
+        <View style={styles.actionRow}>
+          <Pressable
+            onPress={async () => {
+              if (!isCitizen) {
+                return;
+              }
+              await toggleFavorite(resource.id);
+            }}
+            style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
+          >
+            <Text style={styles.smallButtonLabel}>
+              {isFavorite(resource.id) ? "Favori" : "Favori +"}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={async () => {
+              if (!isCitizen) {
+                return;
+              }
+              await toggleSavedForLater(resource.id);
+            }}
+            style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
+          >
+            <Text style={styles.smallButtonLabel}>
+              {isSavedForLater(resource.id) ? "De côté" : "Mettre de côté"}
+            </Text>
+          </Pressable>
+        </View>
+        <View style={styles.actionRow}>
+          <Pressable
+            onPress={async () => {
+              if (!isCitizen) {
+                return;
+              }
+              await toggleCompleted(resource.id);
+            }}
+            style={[styles.smallButton, !isCitizen && styles.smallButtonDisabled]}
+          >
+            <Text style={styles.smallButtonLabel}>
+              {isCompleted(resource.id) ? "Exploitée" : "Marquer exploitée"}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              void Share.share({
+                message: `Découvre cette ressource : ${resource.title}`,
+              });
+            }}
+            style={styles.smallButton}
+          >
+            <Text style={styles.smallButtonLabel}>Partager</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <Pressable
+        onPress={() => {
+          router.push(`/resources/${resource.id}`);
+        }}
+        style={styles.detailButton}
+      >
+        <Text style={styles.detailButtonLabel}>Voir la ressource</Text>
+      </Pressable>
+
+      {!isCitizen && user ? (
+        <Text style={styles.lockedText}>
+          Mode invité: consultation et partage uniquement.
+        </Text>
+      ) : null}
+      {locked ? (
+        <Text style={styles.lockedText}>
+          Connecte-toi pour voir le contenu complet.
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -127,6 +137,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5dbc8",
     padding: 18,
+    gap: 12,
+  },
+  contentPressable: {
     gap: 12,
   },
   header: {
@@ -199,6 +212,18 @@ const styles = StyleSheet.create({
   },
   smallButtonLabel: {
     color: "#183730",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  detailButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#183730",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  detailButtonLabel: {
+    color: "#fffdf8",
     fontSize: 12,
     fontWeight: "800",
   },

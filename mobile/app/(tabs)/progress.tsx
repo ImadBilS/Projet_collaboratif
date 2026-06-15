@@ -1,7 +1,8 @@
-import { Link } from "expo-router";
+import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { EmptyState } from "../../components/EmptyState";
+import { ResourceCard } from "../../components/ResourceCard";
 import { ScreenView } from "../../components/ScreenView";
 import { SectionTitle } from "../../components/SectionTitle";
 import { useResources } from "../../features/resources/ResourcesProvider";
@@ -36,37 +37,77 @@ export default function ProgressTabScreen() {
         </View>
 
         <View style={styles.section}>
-          <SectionTitle title="Collections" subtitle="Trois points d’entrée clairs pour reprendre plus tard." />
-          <Link href="/collections/favorites" asChild>
-            <Pressable style={styles.rowCard}>
-              <Text style={styles.rowTitle}>Mes favoris</Text>
-              <Text style={styles.rowHint}>{collections.favorites.length} ressource(s)</Text>
-            </Pressable>
-          </Link>
-          <Link href="/collections/later" asChild>
-            <Pressable style={styles.rowCard}>
-              <Text style={styles.rowTitle}>Mises de côté</Text>
-              <Text style={styles.rowHint}>{collections.savedForLater.length} ressource(s)</Text>
-            </Pressable>
-          </Link>
-          <Link href="/collections/completed" asChild>
-            <Pressable style={styles.rowCard}>
-              <Text style={styles.rowTitle}>Déjà exploitées</Text>
-              <Text style={styles.rowHint}>{collections.completed.length} ressource(s)</Text>
-            </Pressable>
-          </Link>
+          <SectionTitle
+            title="Collections"
+            subtitle="Toutes les listes utiles restent dans cet onglet pour éviter les sorties de navigation."
+          />
+          <View style={styles.rowCard}>
+            <Text style={styles.rowTitle}>Mes favoris</Text>
+            <Text style={styles.rowHint}>{collections.favorites.length} ressource(s)</Text>
+          </View>
+          {collections.favorites.length === 0 ? (
+            <EmptyState
+              title="Aucun favori"
+              description="Ajoute une ressource en favori pour la retrouver ici."
+            />
+          ) : (
+            <View style={styles.list}>
+              {collections.favorites.map((resource) => (
+                <ResourceCard key={resource.id} resource={resource} />
+              ))}
+            </View>
+          )}
+
+          <View style={styles.rowCard}>
+            <Text style={styles.rowTitle}>Mises de côté</Text>
+            <Text style={styles.rowHint}>
+              {collections.savedForLater.length} ressource(s)
+            </Text>
+          </View>
+          {collections.savedForLater.length === 0 ? (
+            <EmptyState
+              title="Aucune ressource de côté"
+              description="Utilise l’action dédiée sur une ressource pour la reprendre plus tard."
+            />
+          ) : (
+            <View style={styles.list}>
+              {collections.savedForLater.map((resource) => (
+                <ResourceCard key={resource.id} resource={resource} />
+              ))}
+            </View>
+          )}
+
+          <View style={styles.rowCard}>
+            <Text style={styles.rowTitle}>Déjà exploitées</Text>
+            <Text style={styles.rowHint}>{collections.completed.length} ressource(s)</Text>
+          </View>
+          {collections.completed.length === 0 ? (
+            <EmptyState
+              title="Aucune ressource exploitée"
+              description="Marque une ressource comme exploitée pour nourrir ton suivi."
+            />
+          ) : (
+            <View style={styles.list}>
+              {collections.completed.map((resource) => (
+                <ResourceCard key={resource.id} resource={resource} />
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
           <SectionTitle title="Prochaine étape" subtitle="Une recommandation simple pour guider la suite." />
           {collections.savedForLater[0] ? (
-            <Link href={`/resources/${collections.savedForLater[0].id}`} asChild>
-              <Pressable style={styles.nextCard}>
-                <Text style={styles.nextLabel}>À reprendre</Text>
-                <Text style={styles.nextTitle}>{collections.savedForLater[0].title}</Text>
-                <Text style={styles.nextText}>{collections.savedForLater[0].summary}</Text>
-              </Pressable>
-            </Link>
+            <Pressable
+              onPress={() => {
+                router.push(`/resources/${collections.savedForLater[0].id}`);
+              }}
+              style={styles.nextCard}
+            >
+              <Text style={styles.nextLabel}>À reprendre</Text>
+              <Text style={styles.nextTitle}>{collections.savedForLater[0].title}</Text>
+              <Text style={styles.nextText}>{collections.savedForLater[0].summary}</Text>
+            </Pressable>
           ) : (
             <EmptyState
               title="Aucune ressource mise de côté"
@@ -126,6 +167,9 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 12,
+  },
+  list: {
+    gap: 14,
   },
   rowCard: {
     backgroundColor: "#fffdf8",

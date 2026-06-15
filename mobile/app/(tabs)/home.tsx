@@ -29,13 +29,13 @@ export default function HomeTabScreen() {
               <Text style={styles.quickLabel}>Ressources</Text>
             </Pressable>
           </Link>
-          <Link href="/collections/favorites" asChild>
+          <Link href="/(tabs)/progress" asChild>
             <Pressable style={styles.quickCard}>
               <Text style={styles.quickValue}>{summary.favorites}</Text>
               <Text style={styles.quickLabel}>Favoris</Text>
             </Pressable>
           </Link>
-          <Link href="/collections/later" asChild>
+          <Link href="/(tabs)/progress" asChild>
             <Pressable style={styles.quickCard}>
               <Text style={styles.quickValue}>{summary.savedForLater}</Text>
               <Text style={styles.quickLabel}>De côté</Text>

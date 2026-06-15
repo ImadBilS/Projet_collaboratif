@@ -105,7 +105,25 @@ Les résultats doivent être consignés pour chaque cas de test avec :
 - observations
 - capture éventuelle si anomalie
 
-## 9. Références
+## 9. Tableau comparatif des technologies utilisées sur le projet
+
+| Couche | Technologies principales | Rôle dans le projet | Points forts | Limites / vigilance |
+|---|---|---|---|---|
+| Mobile | `React Native`, `Expo`, `Expo Router`, `TypeScript`, `Vitest` | Construire le prototype mobile, la navigation et les tests unitaires des états métier | Développement rapide, application multi-plateforme, navigation simple, bonne DX pour le prototype | Dépendance à l'écosystème Expo, données actuellement mockées localement |
+| Front web | `React`, `Vite`, `React Router`, `Tailwind CSS`, `TypeScript`, `Vitest`, `Testing Library` | Construire l'interface d'administration web, le routage, le style et les tests de composants | Démarrage rapide, build léger, composants testables, styling productif | Le front dépend du back local sur `http://localhost:3000`, vigilance sur CORS et disponibilité API |
+| Back-end | `Node.js`, `Express`, `JWT`, `bcrypt`, `dotenv`, `cors` | Exposer l'API, gérer l'authentification, sécuriser les routes et traiter les données métier | Stack simple, répandue, facile à lancer localement, auth claire | Configuration sensible à l'environnement (`.env`, port, CORS, base PostgreSQL) |
+| Base de données | `PostgreSQL`, `Prisma`, `@prisma/client` | Modéliser les données, appliquer les migrations et accéder aux tables depuis l'API | Schéma structuré, migrations versionnées, accès typé via Prisma | Nécessite une base disponible et cohérente avec les migrations appliquées |
+| Tests | `Vitest`, `@testing-library/react`, `@testing-library/user-event`, `node --test` | Vérifier les utilitaires, états métier, composants UI et quelques comportements back | Rapide à exécuter, lisible, adapté à React et TypeScript | Couverture surtout unitaire / composant, peu de tests d'intégration bout en bout |
+
+### Lecture comparative
+
+- le mobile privilégie la rapidité de prototypage et l'expérience multiplateforme
+- le front web privilégie le rendu UI, le routage et les tests de composants
+- le back privilégie une API REST simple avec authentification JWT
+- la base PostgreSQL et Prisma assurent la persistance structurée côté serveur
+- l'ensemble forme une architecture classique : interfaces React, API Express, données PostgreSQL
+
+## 10. Références
 
 - jeux de tests : `jeux-de-tests-mobile.md`
 - cahier de tests détaillé : `cahier-de-tests-mobile.md`
