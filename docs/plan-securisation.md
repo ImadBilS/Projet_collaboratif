@@ -48,10 +48,10 @@ niveau de gravité dans le résumé du job GitHub Actions :
 | Moyenne | 🟠 orange | `moderate` |
 | Élevée / critique | 🔴 rouge | `high`, `critical` |
 
-Une vulnérabilité 🔴 déclenche un avertissement (`::warning::`) visible sur
-le run, sans faire échouer la CI (l'audit est informatif : les correctifs
-passent par les pull requests Dependabot, voir
-[plan-maintenance.md](./plan-maintenance.md)).
+Une vulnérabilité 🔴 (élevée ou critique) fait **échouer la CI** : le merge
+est bloqué jusqu'à correction (via `npm audit fix` ou une pull request
+Dependabot, voir [plan-maintenance.md](./plan-maintenance.md)). Les niveaux
+🟢 et 🟠 restent informatifs et n'empêchent pas le build.
 
 ## 2. Mesures préventives transverses
 

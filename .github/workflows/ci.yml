@@ -38,7 +38,8 @@ jobs:
             echo "- 🔴 Élevée/critique : $HIGH"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$HIGH" -gt 0 ]; then
-            echo "::warning::$HIGH vulnérabilité(s) de sévérité élevée/critique dans Back (voir 'npm audit')"
+            echo "::error::$HIGH vulnérabilité(s) de sévérité élevée/critique dans Back (voir 'npm audit')"
+            exit 1
           fi
 
       - name: Run tests
@@ -76,7 +77,8 @@ jobs:
             echo "- 🔴 Élevée/critique : $HIGH"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$HIGH" -gt 0 ]; then
-            echo "::warning::$HIGH vulnérabilité(s) de sévérité élevée/critique dans front-web (voir 'npm audit')"
+            echo "::error::$HIGH vulnérabilité(s) de sévérité élevée/critique dans front-web (voir 'npm audit')"
+            exit 1
           fi
 
       - name: Lint
@@ -122,7 +124,8 @@ jobs:
             echo "- 🔴 Élevée/critique : $HIGH"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$HIGH" -gt 0 ]; then
-            echo "::warning::$HIGH vulnérabilité(s) de sévérité élevée/critique dans mobile (voir 'npm audit')"
+            echo "::error::$HIGH vulnérabilité(s) de sévérité élevée/critique dans mobile (voir 'npm audit')"
+            exit 1
           fi
 
       - name: Run tests
