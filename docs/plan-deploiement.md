@@ -142,6 +142,10 @@ cd ~/Projet_collaboratif
 cp .env.prod.example .env.prod
 # Remplir .env.prod avec des valeurs réelles (mots de passe, secrets JWT, etc.)
 
+# Docker Compose lit les variables ${...} de docker-compose.prod.yml depuis
+# un fichier ".env" à la racine (et non depuis .env.prod directement) :
+ln -sf .env.prod .env
+
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
