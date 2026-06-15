@@ -1,0 +1,22 @@
+# Configuration dynamique de Traefik (provider "file").
+#
+# On définit ici manuellement le routeur et le service qui pointent vers le
+# conteneur "frontend" (résolu via le DNS interne de Docker Compose, sur le
+# même réseau que Traefik). Cela évite de monter /var/run/docker.sock dans
+# le conteneur Traefik (provider "docker"), ce qui simplifie la
+# configuration et réduit la surface d'attaque.
+http:
+  routers:
+    app:
+      rule: 'Host(`{{ env "DOMAIN" }}`)'
+      entryPoints:
+        - websecure
+      service: app
+      tls:
+        certResolver: le
+
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:80"

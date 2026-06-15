@@ -1,0 +1,78 @@
+name: CI
+
+# Pipeline d'intégration continue : exécuté à chaque push et pull request,
+# sur les trois parties du projet (back, front web, mobile).
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  back:
+    name: Back (API)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Back/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Back
+        run: npm ci
+
+      - name: Run tests
+        working-directory: Back
+        run: npm test
+
+  front-web:
+    name: Front web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: front-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: front-web
+        run: npm ci
+
+      - name: Lint
+        working-directory: front-web
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: front-web
+        run: npm test
+
+      - name: Build
+        working-directory: front-web
+        run: npm run build
+
+  mobile:
+    name: Mobile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Run tests
+        working-directory: mobile
+        run: npm test
