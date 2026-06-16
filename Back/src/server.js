@@ -3,6 +3,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const authRoutes = require("./routes/auth.routes");
 const ressource = require("./routes/ressources.route");
 const statsRoutes = require("./routes/stats.route.js");
@@ -16,6 +17,8 @@ const collections = require("./routes/collections.route.js");
 const activities = require("./routes/activities.route.js");
 const app = express();
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? "http://localhost:5173";
+
+app.use(helmet());
 
 // Parse automatiquement les requêtes JSON.
 app.use(
