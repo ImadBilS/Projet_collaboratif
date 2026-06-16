@@ -30,7 +30,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
       {/* Carte principale */}
       <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md border-t-4 border-blue-600">
-        
+
         {/* En-tête avec Logo/Icône */}
         <div className="text-center mb-8">
           <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -40,7 +40,7 @@ export default function Login() {
             (RE)Sources Relationnelles
           </h1>
           <p className="text-slate-500 text-sm mt-2 font-medium">
-            Portail d'Administration
+            Portail d'AdministrationNNNNNNNNNNN
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function Login() {
 
         <div className="mt-6 border-t pt-4 text-center">
           <p className="text-xs text-slate-400">
-            Accès réservé aux agents modérateurs.<br/>
+            Accès réservé aux agents modérateurs.<br />
             Toute connexion est enregistrée.
           </p>
         </div>
