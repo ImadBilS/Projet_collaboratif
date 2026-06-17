@@ -40,7 +40,7 @@ export default function Login() {
             (RE)Sources Relationnelles
           </h1>
           <p className="text-slate-500 text-sm mt-2 font-medium">
-            Portail d'AdministrationNN
+            Portail d'Administration
           </p>
         </div>
 
