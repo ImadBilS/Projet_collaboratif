@@ -27,7 +27,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & push de l'image backend
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./Back
           push: true
@@ -36,7 +36,7 @@ jobs:
             ${{ env.IMAGE_BACKEND }}:${{ github.sha }}
 
       - name: Build & push de l'image frontend
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./front-web
           push: true
